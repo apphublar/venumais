@@ -9,8 +9,9 @@ import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSectionLabel } from "@/components/vendor/section-label";
 import {
   cancelClientOrderAction,
-  finalizeClientOrderAction,
+  finalizeClientOrderWithPaymentAction,
   getCustomerOrderDetailAction,
+  notifyOrderPaymentAction,
   reportOrderPaymentAction,
   updateClientOrderAction
 } from "@/lib/client/actions";
@@ -81,6 +82,8 @@ export function ClientPedidos({
   const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("pix");
   const [paymentNote, setPaymentNote] = useState("");
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [checkoutProofFile, setCheckoutProofFile] = useState<File | null>(null);
+  const [copiedPix, setCopiedPix] = useState(false);
   const [isLoadingOrder, startLoadingOrder] = useTransition();
   const [isPendingAction, startPendingAction] = useTransition();
 
@@ -187,24 +190,50 @@ export function ClientPedidos({
     });
   };
 
+  const hasPix = Boolean(store.pix_key?.trim());
+  const pixName = store.pix_receiver_name ?? store.name;
+  const pixCode = hasPix
+    ? `00020126580014BR.GOV.BCB.PIX0136${store.pix_key!.trim()}5204000053039865802BR5921${pixName}6304A1B2`
+    : "";
+
+  const copyPix = async () => {
+    if (!hasPix) {
+      onToast("A loja ainda não configurou chave PIX.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(pixCode);
+      setCopiedPix(true);
+      onToast("Código PIX copiado!");
+      window.setTimeout(() => setCopiedPix(false), 1800);
+    } catch {
+      onToast("Não foi possível copiar o PIX.");
+    }
+  };
+
   const handleFinalizeOrder = () => {
     if (!checkoutOrder) return;
     startPendingAction(async () => {
-      const result = await finalizeClientOrderAction({
-        storeId: store.id,
-        storeSlug: store.slug,
-        orderId: checkoutOrder.id,
-        paymentMethod,
-        paymentNote
-      });
+      const formData = new FormData();
+      formData.set("storeId", store.id);
+      formData.set("storeSlug", store.slug);
+      formData.set("orderId", checkoutOrder.id);
+      formData.set("paymentMethod", paymentMethod);
+      formData.set("paymentNote", paymentNote);
+      if (paymentMethod === "pix" && checkoutProofFile) {
+        formData.set("receipt", checkoutProofFile);
+      }
+      const result = await finalizeClientOrderWithPaymentAction(formData);
       if (result.error) {
         onToast(result.error);
         return;
       }
-      onToast("Pedido confirmado. Agora informe o pagamento.");
+      onToast("Pedido enviado para confirmação da loja.");
       setCheckoutOrder(null);
       setPaymentNote("");
       setPaymentMethod("pix");
+      setCheckoutProofFile(null);
+      setCopiedPix(false);
       router.refresh();
     });
   };
@@ -227,6 +256,22 @@ export function ClientPedidos({
       }
       setPaymentProofFile(null);
       onToast("Comprovante enviado para análise da loja.");
+      router.refresh();
+    });
+  };
+
+  const handleNotifyOrderPayment = (orderId: string) => {
+    startPendingAction(async () => {
+      const result = await notifyOrderPaymentAction({
+        storeId: store.id,
+        storeSlug: store.slug,
+        orderId
+      });
+      if (result.error) {
+        onToast(result.error);
+        return;
+      }
+      onToast("Pagamento informado para a loja.");
       router.refresh();
     });
   };
@@ -355,7 +400,7 @@ export function ClientPedidos({
                         Finalizar pedido
                       </button>
                     ) : null}
-                    {order.status === "awaiting_payment" ? (
+                    {order.status === "awaiting_payment" && order.customer_payment_method === "pix" ? (
                       <>
                         <label className="client-order-proof-upload">
                           <input
@@ -376,6 +421,18 @@ export function ClientPedidos({
                           Enviar comprovante
                         </button>
                       </>
+                    ) : null}
+                    {order.status === "awaiting_payment" &&
+                    order.customer_payment_method !== "pix" ? (
+                      <button
+                        className="vendor-button vendor-button-primary client-order-action-button"
+                        disabled={isPendingAction}
+                        onClick={() => handleNotifyOrderPayment(order.id)}
+                        type="button"
+                      >
+                        <VendorIcon name="check" size={15} />
+                        Avisar pagamento
+                      </button>
                     ) : null}
                     <button
                       className="vendor-button vendor-button-danger client-order-action-button"
@@ -462,6 +519,28 @@ export function ClientPedidos({
               rows={3}
               value={paymentNote}
             />
+            {paymentMethod === "pix" ? (
+              <>
+                <VendorSectionLabel>Pagamento via PIX</VendorSectionLabel>
+                <button className="client-pay-pix-box" disabled={!hasPix} onClick={copyPix} type="button">
+                  <code>{hasPix ? pixCode : "A loja ainda não cadastrou chave PIX."}</code>
+                  <span>
+                    <VendorIcon name={copiedPix ? "check" : "copy"} size={16} />
+                    {hasPix ? (copiedPix ? "Copiado" : "Copiar") : "Indisponível"}
+                  </span>
+                </button>
+                <label className={`client-pay-receipt ${checkoutProofFile ? "is-attached" : ""}`}>
+                  <input
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={(event) => setCheckoutProofFile(event.target.files?.[0] ?? null)}
+                    style={{ display: "none" }}
+                    type="file"
+                  />
+                  <VendorIcon name={checkoutProofFile ? "check" : "share"} size={22} />
+                  <span>{checkoutProofFile ? checkoutProofFile.name : "Anexar comprovante PIX"}</span>
+                </label>
+              </>
+            ) : null}
             <VendorCard className="client-sale-card">
               <div className="client-sale-card-foot" style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
                 <div>
@@ -474,12 +553,12 @@ export function ClientPedidos({
           <div className="client-overlay-footer" style={{ display: "grid", gap: 8 }}>
             <button
               className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
-              disabled={isPendingAction}
+              disabled={isPendingAction || (paymentMethod === "pix" && !checkoutProofFile)}
               onClick={handleFinalizeOrder}
               type="button"
             >
               <VendorIcon name="check" size={16} />
-              Confirmar e enviar ao vendedor
+              {paymentMethod === "pix" ? "Enviar comprovante e finalizar pedido" : "Finalizar pedido"}
             </button>
           </div>
         </ClientOverlay>

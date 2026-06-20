@@ -3335,6 +3335,10 @@ button.vendor-card {
   margin-top: 10px;
 }
 
+.vendor-order-progress {
+  margin-top: 10px;
+}
+
 .vendor-order-origin,
 .vendor-order-delivery,
 .vendor-order-edited {

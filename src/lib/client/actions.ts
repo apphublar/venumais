@@ -365,6 +365,90 @@ export async function finalizeClientOrderAction(input: {
   return {};
 }
 
+export async function finalizeClientOrderWithPaymentAction(
+  formData: FormData
+): Promise<{ error?: string }> {
+  const storeId = String(formData.get("storeId") ?? "");
+  const storeSlug = String(formData.get("storeSlug") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  const paymentMethod = String(formData.get("paymentMethod") ?? "") as "pix" | "cash" | "card";
+  const paymentNote = String(formData.get("paymentNote") ?? "");
+  const receipt = formData.get("receipt");
+
+  if (!storeId || !storeSlug || !orderId) {
+    return { error: "Dados inválidos para finalizar pedido." };
+  }
+
+  if (!["pix", "cash", "card"].includes(paymentMethod)) {
+    return { error: "Forma de pagamento inválida." };
+  }
+
+  if (paymentMethod === "pix") {
+    if (!(receipt instanceof File) || receipt.size <= 0) {
+      return { error: "No PIX, anexe o comprovante para concluir o pedido." };
+    }
+    if (receipt.size > 5 * 1024 * 1024) {
+      return { error: "O comprovante deve ter no máximo 5MB." };
+    }
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(receipt.type)) {
+      return { error: "Formato inválido. Envie JPG, PNG, WEBP ou PDF." };
+    }
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { error: finalizeError } = await supabase.rpc("finalize_customer_order_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_payment_method: paymentMethod,
+    p_payment_note: paymentNote.trim() || null
+  });
+
+  if (finalizeError) {
+    return { error: clientAuthError(finalizeError.message) };
+  }
+
+  let proofUrl: string | null = null;
+  let proofName: string | null = null;
+
+  if (paymentMethod === "pix" && receipt instanceof File && receipt.size > 0) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user?.id) {
+      return { error: "Sessão inválida. Faça login novamente." };
+    }
+
+    const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = `${user.id}/${storeSlug}/${orderId}-${Date.now()}-${safeName}`;
+    const upload = await supabase.storage.from("order-payment-proofs").upload(filePath, receipt, {
+      cacheControl: "3600",
+      upsert: false
+    });
+    if (upload.error) {
+      return { error: "Não foi possível enviar o comprovante do pedido." };
+    }
+    const { data: publicData } = supabase.storage.from("order-payment-proofs").getPublicUrl(filePath);
+    proofUrl = publicData.publicUrl;
+    proofName = receipt.name;
+  }
+
+  const { error: reportError } = await supabase.rpc("report_order_payment_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_proof_url: proofUrl,
+    p_proof_name: proofName
+  });
+
+  if (reportError) {
+    return { error: clientAuthError(reportError.message) };
+  }
+
+  revalidatePath(`/loja/${storeSlug}`);
+  revalidatePath("/painel/pedidos");
+  return {};
+}
+
 export async function reportOrderPaymentAction(formData: FormData): Promise<{ error?: string }> {
   const storeId = String(formData.get("storeId") ?? "");
   const storeSlug = String(formData.get("storeSlug") ?? "");
@@ -421,6 +505,28 @@ export async function reportOrderPaymentAction(formData: FormData): Promise<{ er
   }
 
   revalidatePath(`/loja/${storeSlug}`);
+  revalidatePath("/painel/pedidos");
+  return {};
+}
+
+export async function notifyOrderPaymentAction(input: {
+  storeId: string;
+  storeSlug: string;
+  orderId: string;
+}): Promise<{ error?: string }> {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("report_order_payment_for_portal", {
+    p_store_id: input.storeId,
+    p_order_id: input.orderId,
+    p_proof_url: null,
+    p_proof_name: null
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  revalidatePath(`/loja/${input.storeSlug}`);
   revalidatePath("/painel/pedidos");
   return {};
 }

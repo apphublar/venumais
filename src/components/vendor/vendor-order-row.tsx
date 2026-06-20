@@ -36,8 +36,31 @@ function orderStatusLabel(order: VendorStoreOrder) {
   return { label: "Novo pedido", tone: "new" as const };
 }
 
+function orderProgressMeta(order: VendorStoreOrder) {
+  if (order.status === "delivered") {
+    return { percent: 100, left: "Pedido concluído", right: "Entregue", done: true };
+  }
+  if (order.status === "delivering") {
+    return { percent: 88, left: "Pedido em entrega", right: "Em rota", done: false };
+  }
+  if (order.status === "paid") {
+    return { percent: 76, left: "Pagamento confirmado", right: "Pago", done: false };
+  }
+  if (order.status === "payment_review") {
+    return { percent: 62, left: "Comprovante enviado", right: "Em análise", done: false };
+  }
+  if (order.status === "awaiting_payment") {
+    return { percent: 48, left: "Aguardando pagamento", right: "Pagamento", done: false };
+  }
+  if (order.status === "quoted" || order.status === "quote") {
+    return { percent: 30, left: "Orçamento enviado", right: "Aguardando", done: false };
+  }
+  return { percent: 14, left: "Novo pedido recebido", right: "Novo", done: false };
+}
+
 export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
   const status = orderStatusLabel(order);
+  const progress = orderProgressMeta(order);
   const fromVendor = order.source === "vendor" || order.source === "seller";
   const amountLabel =
     order.total_amount === null ? "Sob orçamento" : formatBRL(order.total_amount);
@@ -80,6 +103,21 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
               <VendorIcon name="edit" size={11} /> Editado pelo cliente
             </span>
           ) : null}
+        </div>
+
+        <div className="vendor-order-progress">
+          <div className="vendor-crediario-progress-track">
+            <div
+              className={`vendor-crediario-progress-fill ${progress.done ? "vendor-crediario-progress-fill-done" : ""}`}
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <div className="vendor-crediario-progress-meta">
+            <span>{progress.left}</span>
+            <span className={progress.done ? "vendor-crediario-progress-next" : "vendor-crediario-progress-next-warn"}>
+              {progress.right}
+            </span>
+          </div>
         </div>
       </VendorCard>
     </Link>
