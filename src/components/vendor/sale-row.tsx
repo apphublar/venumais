@@ -2,6 +2,7 @@ import Link from "next/link";
 import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
+import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSaleBadge } from "@/components/vendor/sale-badge";
 import { getCustomerInitials } from "@/lib/customers/format";
 import { formatBRL } from "@/lib/products/format";
