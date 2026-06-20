@@ -111,13 +111,20 @@ export function ClientPedidos({
     [sales]
   );
 
-  const orderOpenStatuses = ["new", "quote", "quoted", "awaiting_payment", "payment_review", "delivering"] as const;
+  const quoteOrders = orders.filter(
+    (o) => o.status === "new" || o.status === "quote" || o.status === "quoted"
+  );
+  const awaitingOrders = orders.filter((o) => o.status === "awaiting_payment");
+  const reviewOrders = orders.filter((o) => o.status === "payment_review");
+  const confirmedOrders = orders.filter(
+    (o) => o.status === "paid" || o.status === "delivering" || o.status === "delivered"
+  );
 
   const counts = {
     todos: orders.length + sales.length,
-    orcamento: orders.filter((order) => order.status === "new" || order.status === "quote" || order.status === "quoted").length,
-    aberto: openSales.length + pendingConfirmation.length + orders.filter((order) => orderOpenStatuses.includes(order.status as (typeof orderOpenStatuses)[number])).length,
-    quitado: paidSales.length
+    orcamento: quoteOrders.length,
+    aberto: openSales.length + pendingConfirmation.length + awaitingOrders.length + reviewOrders.length,
+    quitado: paidSales.length + confirmedOrders.length
   };
 
   const tabs: Array<[OrderFilter, string]> = [
@@ -276,6 +283,148 @@ export function ClientPedidos({
     });
   };
 
+  const renderOrderCard = (order: PortalOrder) => (
+    <VendorCard className="client-quote-card" key={order.id}>
+      <div className="client-sale-card-head">
+        <div>
+          <strong>Pedido #{order.order_code}</strong>
+          <span>
+            {formatLongDate(order.created_at)} · {order.item_count}{" "}
+            {order.item_count === 1 ? "item" : "itens"}
+            {order.edited_at ? " · editado" : ""}
+          </span>
+        </div>
+        {(() => {
+          const meta = orderStatusMeta(order.status);
+          return (
+            <span className={`client-badge client-badge-${meta.tone}`}>{meta.label}</span>
+          );
+        })()}
+      </div>
+      {order.total_amount !== null ? (
+        <div className="client-sale-card-foot">
+          <div>
+            <span>Total</span>
+            <strong>{formatBRL(order.total_amount)}</strong>
+          </div>
+          <div>
+            <span>Tipo</span>
+            <strong>{order.delivery_type === "delivery" ? "Entrega" : "Retirada"}</strong>
+          </div>
+        </div>
+      ) : (
+        <div className="client-quote-note">
+          <VendorIcon name="clock" size={15} />
+          <span>Aguardando valores da loja</span>
+        </div>
+      )}
+      {order.status === "awaiting_payment" && order.customer_payment_method === "card" ? (
+        <div className="client-quote-note">
+          <VendorIcon name="wallet" size={15} />
+          <span>
+            {order.vendor_payment_link ? (
+              <a href={order.vendor_payment_link} rel="noopener noreferrer" target="_blank">
+                Abrir link de pagamento
+              </a>
+            ) : (
+              "Aguardando a loja enviar o link de pagamento"
+            )}
+          </span>
+        </div>
+      ) : null}
+      {order.status === "delivering" ? (
+        <div className="client-quote-note">
+          <VendorIcon name="truck" size={15} />
+          <span>
+            {order.tracking_url ? (
+              <a href={order.tracking_url} rel="noopener noreferrer" target="_blank">
+                Rastrear entrega {order.tracking_code ? `(${order.tracking_code})` : ""}
+              </a>
+            ) : (
+              "Seu pedido está a caminho!"
+            )}
+          </span>
+        </div>
+      ) : null}
+      {order.status === "delivered" ? (
+        <div className="client-quote-note">
+          <VendorIcon name="check" size={15} />
+          <span>Pedido entregue! ✓</span>
+        </div>
+      ) : null}
+      {order.status === "paid" ? (
+        <div className="client-quote-note">
+          <VendorIcon name="check" size={15} />
+          <span>Pagamento confirmado pela loja.</span>
+        </div>
+      ) : null}
+      <div className="client-order-actions">
+        <button
+          className="vendor-button vendor-button-ghost client-order-action-button"
+          disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
+          onClick={() => handleOpenQuoteEditor(order.id)}
+          type="button"
+        >
+          <VendorIcon name="edit" size={15} />
+          Editar
+        </button>
+        {order.total_amount !== null && (order.status === "new" || order.status === "quote" || order.status === "quoted") ? (
+          <button
+            className="vendor-button vendor-button-primary client-order-action-button"
+            onClick={() => setCheckoutOrder(order)}
+            type="button"
+          >
+            <VendorIcon name="check" size={15} />
+            Finalizar pedido
+          </button>
+        ) : null}
+        {order.status === "awaiting_payment" && order.customer_payment_method === "pix" ? (
+          <>
+            <label className="client-order-proof-upload">
+              <input
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(event) => setPaymentProofFile(event.target.files?.[0] ?? null)}
+                type="file"
+              />
+              <VendorIcon name="share" size={14} />
+              {paymentProofFile ? paymentProofFile.name : "Anexar comprovante"}
+            </label>
+            <button
+              className="vendor-button vendor-button-primary client-order-action-button"
+              disabled={isPendingAction}
+              onClick={() => handleReportOrderPayment(order)}
+              type="button"
+            >
+              <VendorIcon name="check" size={15} />
+              Enviar comprovante
+            </button>
+          </>
+        ) : null}
+        {order.status === "awaiting_payment" &&
+        order.customer_payment_method !== "pix" ? (
+          <button
+            className="vendor-button vendor-button-primary client-order-action-button"
+            disabled={isPendingAction}
+            onClick={() => handleNotifyOrderPayment(order.id)}
+            type="button"
+          >
+            <VendorIcon name="check" size={15} />
+            Avisar pagamento
+          </button>
+        ) : null}
+        <button
+          className="vendor-button vendor-button-danger client-order-action-button"
+          disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
+          onClick={() => handleCancelQuote(order.id)}
+          type="button"
+        >
+          <VendorIcon name="x" size={15} />
+          Excluir
+        </button>
+      </div>
+    </VendorCard>
+  );
+
   return (
     <div className="client-main">
       <ClientScreenHeader big subtitle="Compras e orçamentos" title="Meus pedidos" />
@@ -317,138 +466,39 @@ export function ClientPedidos({
           </>
         ) : null}
 
-        {show("orcamento") ? (
+        {/* Orçamentos e novos pedidos via catálogo */}
+        {(filter === "todos" || filter === "orcamento") ? (
           <>
-            <VendorSectionLabel>Aguardando orçamento do vendedor</VendorSectionLabel>
-            {orders.length ? (
-              orders.map((order) => (
-                <VendorCard className="client-quote-card" key={order.id}>
-                  <div className="client-sale-card-head">
-                    <div>
-                      <strong>Pedido #{order.order_code}</strong>
-                      <span>
-                        {formatLongDate(order.created_at)} · {order.item_count}{" "}
-                        {order.item_count === 1 ? "item" : "itens"}
-                        {order.edited_at ? " · editado" : ""}
-                      </span>
-                    </div>
-                    {(() => {
-                      const meta = orderStatusMeta(order.status);
-                      return (
-                        <span className={`client-badge client-badge-${meta.tone}`}>{meta.label}</span>
-                      );
-                    })()}
-                  </div>
-                  {order.total_amount !== null ? (
-                    <div className="client-sale-card-foot">
-                      <div>
-                        <span>Total</span>
-                        <strong>{formatBRL(order.total_amount)}</strong>
-                      </div>
-                      <div>
-                        <span>Tipo</span>
-                        <strong>{order.delivery_type === "delivery" ? "Entrega" : "Retirada"}</strong>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="client-quote-note">
-                      <VendorIcon name="clock" size={15} />
-                      <span>Aguardando valores da loja</span>
-                    </div>
-                  )}
-                  {order.status === "awaiting_payment" && order.customer_payment_method === "card" ? (
-                    <div className="client-quote-note">
-                      <VendorIcon name="wallet" size={15} />
-                      <span>
-                        {order.vendor_payment_link ? (
-                          <a href={order.vendor_payment_link} rel="noopener noreferrer" target="_blank">
-                            Abrir link de pagamento
-                          </a>
-                        ) : (
-                          "Aguardando a loja enviar o link de pagamento"
-                        )}
-                      </span>
-                    </div>
-                  ) : null}
-                  {order.status === "delivering" && order.tracking_url ? (
-                    <div className="client-quote-note">
-                      <VendorIcon name="truck" size={15} />
-                      <span>
-                        <a href={order.tracking_url} rel="noopener noreferrer" target="_blank">
-                          Rastrear entrega ({order.tracking_code || "link"})
-                        </a>
-                      </span>
-                    </div>
-                  ) : null}
-                  <div className="client-order-actions">
-                    <button
-                      className="vendor-button vendor-button-ghost client-order-action-button"
-                      disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
-                      onClick={() => handleOpenQuoteEditor(order.id)}
-                      type="button"
-                    >
-                      <VendorIcon name="edit" size={15} />
-                      Editar
-                    </button>
-                    {order.total_amount !== null && (order.status === "new" || order.status === "quote" || order.status === "quoted") ? (
-                      <button
-                        className="vendor-button vendor-button-primary client-order-action-button"
-                        onClick={() => setCheckoutOrder(order)}
-                        type="button"
-                      >
-                        <VendorIcon name="check" size={15} />
-                        Finalizar pedido
-                      </button>
-                    ) : null}
-                    {order.status === "awaiting_payment" && order.customer_payment_method === "pix" ? (
-                      <>
-                        <label className="client-order-proof-upload">
-                          <input
-                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                            onChange={(event) => setPaymentProofFile(event.target.files?.[0] ?? null)}
-                            type="file"
-                          />
-                          <VendorIcon name="share" size={14} />
-                          {paymentProofFile ? paymentProofFile.name : "Anexar comprovante"}
-                        </label>
-                        <button
-                          className="vendor-button vendor-button-primary client-order-action-button"
-                          disabled={isPendingAction}
-                          onClick={() => handleReportOrderPayment(order)}
-                          type="button"
-                        >
-                          <VendorIcon name="check" size={15} />
-                          Enviar comprovante
-                        </button>
-                      </>
-                    ) : null}
-                    {order.status === "awaiting_payment" &&
-                    order.customer_payment_method !== "pix" ? (
-                      <button
-                        className="vendor-button vendor-button-primary client-order-action-button"
-                        disabled={isPendingAction}
-                        onClick={() => handleNotifyOrderPayment(order.id)}
-                        type="button"
-                      >
-                        <VendorIcon name="check" size={15} />
-                        Avisar pagamento
-                      </button>
-                    ) : null}
-                    <button
-                      className="vendor-button vendor-button-danger client-order-action-button"
-                      disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
-                      onClick={() => handleCancelQuote(order.id)}
-                      type="button"
-                    >
-                      <VendorIcon name="x" size={15} />
-                      Excluir
-                    </button>
-                  </div>
-                </VendorCard>
-              ))
+            <VendorSectionLabel>Orçamentos e novos pedidos</VendorSectionLabel>
+            {quoteOrders.length ? (
+              quoteOrders.map((order) => renderOrderCard(order))
             ) : filter === "orcamento" ? (
               empty("Nenhum orçamento pendente.")
             ) : null}
+          </>
+        ) : null}
+
+        {/* Pedidos aguardando pagamento */}
+        {(filter === "todos" || filter === "aberto") && awaitingOrders.length > 0 ? (
+          <>
+            <VendorSectionLabel>Aguardando pagamento</VendorSectionLabel>
+            {awaitingOrders.map((order) => renderOrderCard(order))}
+          </>
+        ) : null}
+
+        {/* Comprovante enviado – em análise */}
+        {(filter === "todos" || filter === "aberto") && reviewOrders.length > 0 ? (
+          <>
+            <VendorSectionLabel>Comprovante em análise</VendorSectionLabel>
+            {reviewOrders.map((order) => renderOrderCard(order))}
+          </>
+        ) : null}
+
+        {/* Pedidos confirmados / entregues */}
+        {(filter === "todos" || filter === "quitado") && confirmedOrders.length > 0 ? (
+          <>
+            <VendorSectionLabel>Pedidos confirmados</VendorSectionLabel>
+            {confirmedOrders.map((order) => renderOrderCard(order))}
           </>
         ) : null}
 

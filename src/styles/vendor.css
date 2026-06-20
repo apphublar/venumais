@@ -3252,6 +3252,7 @@ button.vendor-card {
 
 .vendor-order-row {
   margin-bottom: 9px;
+  padding: 13px;
 }
 
 .vendor-order-row-main {
@@ -3325,6 +3326,26 @@ button.vendor-card {
 .vendor-order-status-wholesale {
   background: #cffafe;
   color: #0e7490;
+}
+
+.vendor-order-status-paid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.vendor-order-status-review {
+  background: #fef3c7;
+  color: #92660b;
+}
+
+.vendor-order-status-delivering {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.vendor-order-status-delivered {
+  background: #dcfce7;
+  color: #065f46;
 }
 
 .vendor-order-row-meta {

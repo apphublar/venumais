@@ -173,15 +173,25 @@ export function OrderDetailView({
           {isWholesale ? (
             <span className="vendor-order-status vendor-order-status-wholesale">Encomenda atacado</span>
           ) : null}
-          <span className="vendor-order-status vendor-order-status-new">
-            {order.status === "new" && "Novo pedido"}
-            {(order.status === "quoted" || order.status === "quote") && "Orçamento enviado"}
-            {order.status === "awaiting_payment" && "Aguardando pagamento"}
-            {order.status === "payment_review" && "Comprovante enviado"}
-            {order.status === "paid" && "Pago"}
-            {order.status === "delivering" && "Em entrega"}
-            {order.status === "delivered" && "Entregue"}
-          </span>
+          {(() => {
+            const s = order.status;
+            const cls =
+              s === "paid" ? "vendor-order-status-paid" :
+              s === "delivering" ? "vendor-order-status-delivering" :
+              s === "delivered" ? "vendor-order-status-delivered" :
+              s === "payment_review" || s === "awaiting_payment" ? "vendor-order-status-review" :
+              s === "quoted" || s === "quote" ? "vendor-order-status-quote" :
+              "vendor-order-status-new";
+            const label =
+              s === "new" ? "Novo pedido" :
+              s === "quoted" || s === "quote" ? "Orçamento enviado" :
+              s === "awaiting_payment" ? "Aguardando pagamento" :
+              s === "payment_review" ? "Comprovante enviado" :
+              s === "paid" ? "Pago" :
+              s === "delivering" ? "Em entrega" :
+              "Entregue";
+            return <span className={`vendor-order-status ${cls}`}>{label}</span>;
+          })()}
         </div>
 
         <VendorCard className="vendor-order-detail-customer">
