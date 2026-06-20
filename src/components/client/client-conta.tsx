@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ClientOverlay } from "@/components/client/client-overlay";
 import { ClientScreenHeader } from "@/components/client/client-screen-header";
@@ -66,6 +66,7 @@ export function ClientConta({
   owedAmount: number;
   store: PublicStore;
 }) {
+  type ContaSection = "perfil" | "seguranca" | "endereco" | "conta";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState(customer.email ?? "");
@@ -85,6 +86,11 @@ export function ClientConta({
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [activeSection, setActiveSection] = useState<ContaSection>("perfil");
+  const profileRef = useRef<HTMLDivElement | null>(null);
+  const securityRef = useRef<HTMLDivElement | null>(null);
+  const addressRef = useRef<HTMLDivElement | null>(null);
+  const accountRef = useRef<HTMLDivElement | null>(null);
   const supportMessage = `Oi! Sou cliente da ${store.name} e preciso de suporte no portal da loja.`;
 
   const contactSupport = () => {
@@ -93,6 +99,17 @@ export function ClientConta({
 
   const blocked = owedAmount > 0.001;
   const editable = editing && !blocked;
+
+  const jumpToSection = (section: ContaSection) => {
+    setActiveSection(section);
+    const map: Record<ContaSection, React.RefObject<HTMLDivElement | null>> = {
+      perfil: profileRef,
+      seguranca: securityRef,
+      endereco: addressRef,
+      conta: accountRef
+    };
+    map[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const save = () => {
     startTransition(async () => {
@@ -242,133 +259,179 @@ export function ClientConta({
           </button>
         ) : null}
 
-        <VendorSectionLabel>Contato</VendorSectionLabel>
-        <ContaField
-          inputMode="email"
-          label="Email"
-          onChange={setEmail}
-          placeholder="voce@email.com"
-          readOnly={!editable}
-          value={email}
-        />
-        <ContaField
-          inputMode="tel"
-          label="WhatsApp / Telefone"
-          onChange={setPhone}
-          placeholder="(11) 90000-0000"
-          readOnly={!editable}
-          value={phone}
-        />
-
-        <VendorSectionLabel>Senha</VendorSectionLabel>
-        {!changePassword ? (
+        <div className="client-conta-menu">
           <button
-            className="client-conta-row-button"
-            disabled={blocked}
-            onClick={() => !blocked && setChangePassword(true)}
+            className={`client-conta-menu-item ${activeSection === "perfil" ? "is-active" : ""}`}
+            onClick={() => jumpToSection("perfil")}
             type="button"
           >
-            <VendorIcon name="alert" size={18} />
-            <span>Trocar senha</span>
-            {blocked ? (
-              <VendorIcon name="eyeOff" size={16} />
-            ) : (
-              <VendorIcon name="chevR" size={18} />
-            )}
+            <VendorIcon name="user" size={15} />
+            Perfil
           </button>
-        ) : (
-          <VendorCard className="client-conta-password-card">
-            <label className="client-conta-field">
-              <span>Senha atual</span>
-              <input
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder="••••••"
-                type="password"
-                value={currentPassword}
-              />
-            </label>
-            <label className="client-conta-field">
-              <span>Nova senha</span>
-              <input
-                onChange={(event) => setNewPassword(event.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                type="password"
-                value={newPassword}
-              />
-            </label>
-            <label className="client-conta-field">
-              <span>Confirme a nova senha</span>
-              <input
-                onChange={(event) => setConfirmNewPassword(event.target.value)}
-                placeholder="Repita a nova senha"
-                type="password"
-                value={confirmNewPassword}
-              />
-            </label>
-            <div className="client-conta-inline-actions">
-              <button
-                className="vendor-button vendor-button-ghost"
-                onClick={() => {
-                  setChangePassword(false);
-                  setCurrentPassword("");
-                  setNewPassword("");
-                  setConfirmNewPassword("");
-                }}
-                type="button"
-              >
-                Cancelar
-              </button>
-              <button
-                className="vendor-button vendor-button-primary"
-                disabled={pending}
-                onClick={savePassword}
-                type="button"
-              >
-                <VendorIcon name="check" size={16} />
-                Salvar senha
-              </button>
-            </div>
-          </VendorCard>
-        )}
+          <button
+            className={`client-conta-menu-item ${activeSection === "seguranca" ? "is-active" : ""}`}
+            onClick={() => jumpToSection("seguranca")}
+            type="button"
+          >
+            <VendorIcon name="lock" size={15} />
+            Segurança
+          </button>
+          <button
+            className={`client-conta-menu-item ${activeSection === "endereco" ? "is-active" : ""}`}
+            onClick={() => jumpToSection("endereco")}
+            type="button"
+          >
+            <VendorIcon name="pin" size={15} />
+            Endereço
+          </button>
+          <button
+            className={`client-conta-menu-item ${activeSection === "conta" ? "is-active" : ""}`}
+            onClick={() => jumpToSection("conta")}
+            type="button"
+          >
+            <VendorIcon name="cog" size={15} />
+            Conta
+          </button>
+        </div>
 
-        <VendorSectionLabel>Endereço de entrega</VendorSectionLabel>
-        <ContaField
-          inputMode="numeric"
-          label="CEP"
-          onChange={setPostalCode}
-          placeholder="00000-000"
-          readOnly={!editable}
-          value={postalCode}
-        />
-        <ContaField
-          label="Rua e número"
-          onChange={setStreet}
-          placeholder="Rua, número"
-          readOnly={!editable}
-          value={street}
-        />
-        <ContaField
-          label="Complemento"
-          onChange={setComplement}
-          optional
-          placeholder="Apto, bloco, referência"
-          readOnly={!editable}
-          value={complement}
-        />
-        <ContaField
-          label="Bairro"
-          onChange={setNeighborhood}
-          placeholder="Bairro"
-          readOnly={!editable}
-          value={neighborhood}
-        />
-        <ContaField
-          label="Cidade / UF"
-          onChange={setCityState}
-          placeholder="Cidade, UF"
-          readOnly={!editable}
-          value={cityState}
-        />
+        <div className="client-conta-section" ref={profileRef}>
+          <VendorSectionLabel>Contato</VendorSectionLabel>
+          <ContaField
+            inputMode="email"
+            label="Email"
+            onChange={setEmail}
+            placeholder="voce@email.com"
+            readOnly={!editable}
+            value={email}
+          />
+          <ContaField
+            inputMode="tel"
+            label="WhatsApp / Telefone"
+            onChange={setPhone}
+            placeholder="(11) 90000-0000"
+            readOnly={!editable}
+            value={phone}
+          />
+        </div>
+
+        <div className="client-conta-section" ref={securityRef}>
+          <VendorSectionLabel>Senha</VendorSectionLabel>
+          {!changePassword ? (
+            <button
+              className="client-conta-row-button"
+              disabled={blocked}
+              onClick={() => {
+                if (!blocked) {
+                  setActiveSection("seguranca");
+                  setChangePassword(true);
+                }
+              }}
+              type="button"
+            >
+              <VendorIcon name="alert" size={18} />
+              <span>Trocar senha</span>
+              {blocked ? (
+                <VendorIcon name="eyeOff" size={16} />
+              ) : (
+                <VendorIcon name="chevR" size={18} />
+              )}
+            </button>
+          ) : (
+            <VendorCard className="client-conta-password-card">
+              <label className="client-conta-field">
+                <span>Senha atual</span>
+                <input
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  placeholder="••••••"
+                  type="password"
+                  value={currentPassword}
+                />
+              </label>
+              <label className="client-conta-field">
+                <span>Nova senha</span>
+                <input
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  type="password"
+                  value={newPassword}
+                />
+              </label>
+              <label className="client-conta-field">
+                <span>Confirme a nova senha</span>
+                <input
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  placeholder="Repita a nova senha"
+                  type="password"
+                  value={confirmNewPassword}
+                />
+              </label>
+              <div className="client-conta-inline-actions">
+                <button
+                  className="vendor-button vendor-button-ghost"
+                  onClick={() => {
+                    setChangePassword(false);
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmNewPassword("");
+                  }}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="vendor-button vendor-button-primary"
+                  disabled={pending}
+                  onClick={savePassword}
+                  type="button"
+                >
+                  <VendorIcon name="check" size={16} />
+                  Salvar senha
+                </button>
+              </div>
+            </VendorCard>
+          )}
+        </div>
+
+        <div className="client-conta-section" ref={addressRef}>
+          <VendorSectionLabel>Endereço de entrega</VendorSectionLabel>
+          <ContaField
+            inputMode="numeric"
+            label="CEP"
+            onChange={setPostalCode}
+            placeholder="00000-000"
+            readOnly={!editable}
+            value={postalCode}
+          />
+          <ContaField
+            label="Rua e número"
+            onChange={setStreet}
+            placeholder="Rua, número"
+            readOnly={!editable}
+            value={street}
+          />
+          <ContaField
+            label="Complemento"
+            onChange={setComplement}
+            optional
+            placeholder="Apto, bloco, referência"
+            readOnly={!editable}
+            value={complement}
+          />
+          <ContaField
+            label="Bairro"
+            onChange={setNeighborhood}
+            placeholder="Bairro"
+            readOnly={!editable}
+            value={neighborhood}
+          />
+          <ContaField
+            label="Cidade / UF"
+            onChange={setCityState}
+            placeholder="Cidade, UF"
+            readOnly={!editable}
+            value={cityState}
+          />
+        </div>
 
         {editable ? (
           <button className="vendor-button vendor-button-primary vendor-button-full" disabled={pending} onClick={save} type="button">
@@ -377,52 +440,59 @@ export function ClientConta({
           </button>
         ) : null}
 
-        <VendorSectionLabel>Conta</VendorSectionLabel>
-        {!confirmDelete ? (
-          <button
-            className={`client-conta-row-button ${blocked ? "is-disabled" : "is-danger"}`}
-            onClick={() =>
-              blocked ? onToast("Quite suas parcelas para excluir a conta") : setConfirmDelete(true)
-            }
-            type="button"
-          >
-            <VendorIcon name="x" size={18} />
-            <span>Excluir minha conta</span>
-            {blocked ? <em>indisponível</em> : null}
-          </button>
-        ) : (
-          <VendorCard className="client-conta-delete-card">
-            <p>
-              Para sua segurança, a exclusão da conta é confirmada com o suporte da loja.
-            </p>
-            <div className="client-conta-inline-actions">
-              <button
-                className="vendor-button vendor-button-ghost"
-                onClick={() => setConfirmDelete(false)}
-                type="button"
-              >
-                Voltar
-              </button>
-              <button
-                className="vendor-button vendor-button-danger"
-                disabled={pending}
-                onClick={requestDeletion}
-                type="button"
-              >
-                <VendorIcon name="check" size={16} />
-                Solicitar exclusão
-              </button>
-              <button
-                className="vendor-button vendor-button-ghost"
-                onClick={contactSupport}
-                type="button"
-              >
-                <VendorIcon name="whatsapp" size={16} />
-                Falar com suporte
-              </button>
-            </div>
-          </VendorCard>
-        )}
+        <div className="client-conta-section" ref={accountRef}>
+          <VendorSectionLabel>Conta</VendorSectionLabel>
+          {!confirmDelete ? (
+            <button
+              className={`client-conta-row-button ${blocked ? "is-disabled" : "is-danger"}`}
+              onClick={() => {
+                setActiveSection("conta");
+                if (blocked) {
+                  onToast("Quite suas parcelas para excluir a conta");
+                } else {
+                  setConfirmDelete(true);
+                }
+              }}
+              type="button"
+            >
+              <VendorIcon name="x" size={18} />
+              <span>Excluir minha conta</span>
+              {blocked ? <em>indisponível</em> : null}
+            </button>
+          ) : (
+            <VendorCard className="client-conta-delete-card">
+              <p>
+                Para sua segurança, a exclusão da conta é confirmada com o suporte da loja.
+              </p>
+              <div className="client-conta-inline-actions">
+                <button
+                  className="vendor-button vendor-button-ghost"
+                  onClick={() => setConfirmDelete(false)}
+                  type="button"
+                >
+                  Voltar
+                </button>
+                <button
+                  className="vendor-button vendor-button-danger"
+                  disabled={pending}
+                  onClick={requestDeletion}
+                  type="button"
+                >
+                  <VendorIcon name="check" size={16} />
+                  Solicitar exclusão
+                </button>
+                <button
+                  className="vendor-button vendor-button-ghost"
+                  onClick={contactSupport}
+                  type="button"
+                >
+                  <VendorIcon name="whatsapp" size={16} />
+                  Falar com suporte
+                </button>
+              </div>
+            </VendorCard>
+          )}
+        </div>
 
         <button className="client-conta-logout" disabled={pending} onClick={logout} type="button">
           Sair da conta

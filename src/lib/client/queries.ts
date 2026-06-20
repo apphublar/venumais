@@ -125,6 +125,15 @@ export type PortalOrder = {
   status: string;
   order_type: string;
   delivery_type: string;
+  customer_payment_method?: "pix" | "cash" | "card" | null;
+  vendor_payment_link?: string | null;
+  vendor_payment_message?: string | null;
+  payment_proof_url?: string | null;
+  paid_at?: string | null;
+  expected_delivery_date?: string | null;
+  delivered_at?: string | null;
+  tracking_code?: string | null;
+  tracking_url?: string | null;
   notes: string | null;
   subtotal_amount: number | null;
   discount_amount: number;
@@ -158,6 +167,8 @@ export type VendorStoreOrder = PortalOrder & {
   customer_full_name: string;
   customer_phone: string;
   customer_avatar_color: string;
+  payment_proof_url?: string | null;
+  expected_delivery_date?: string | null;
 };
 
 export type CancelledStoreOrder = {

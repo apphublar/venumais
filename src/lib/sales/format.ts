@@ -17,7 +17,20 @@ export function parseBRL(value: string) {
 }
 
 export function formatShortDate(isoDate: string) {
-  return new Date(`${isoDate}T00:00:00`).toLocaleDateString("pt-BR", {
+  const raw = String(isoDate ?? "").trim();
+  if (!raw) {
+    return "--/--";
+  }
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? `${raw}T00:00:00`
+    : raw.includes("T")
+      ? raw
+      : raw.replace(" ", "T");
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return "--/--";
+  }
+  return parsed.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit"
   });

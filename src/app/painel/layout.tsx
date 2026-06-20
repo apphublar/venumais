@@ -1,7 +1,6 @@
 import { Hanken_Grotesk } from "next/font/google";
 import { VendorShell } from "@/components/vendor/shell";
 import { requireStoreAccess } from "@/lib/auth/session";
-import { getBrandColorVars } from "@/lib/stores/brand-color";
 import "@/styles/vendor.css";
 import "@/styles/vendor-cobranca.css";
 
@@ -16,11 +15,10 @@ export default async function PainelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { store } = await requireStoreAccess();
-  const brandVars = getBrandColorVars(store.brand_color, store.brand_text_color);
+  await requireStoreAccess();
 
   return (
-    <div className={hanken.variable} style={brandVars as React.CSSProperties}>
+    <div className={hanken.variable}>
       <VendorShell>{children}</VendorShell>
     </div>
   );

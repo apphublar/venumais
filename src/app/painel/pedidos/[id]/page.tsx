@@ -17,7 +17,7 @@ function orderHeaderTitle(order: Awaited<ReturnType<typeof getStoreOrder>>) {
     return `Encomenda #${order.order_code}`;
   }
 
-  if (order.status === "quote" || order.order_type === "quote") {
+  if (order.status === "quoted" || order.order_type === "quote") {
     return `Orçamento #${order.order_code}`;
   }
 

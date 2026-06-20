@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { VendorIcon } from "@/components/vendor/icon";
 
 const NAV_ITEMS = [
@@ -10,9 +11,41 @@ const NAV_ITEMS = [
   { href: "/painel/clientes", icon: "users" as const, label: "Clientes" },
   { href: "/painel/estoque", icon: "box" as const, label: "Estoque" }
 ];
+const VIEW_MODE_KEY = "venumais-vendor-view-mode";
 
 export function VendorShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [viewMode, setViewMode] = useState<"desktop" | "mobile">(() => {
+    if (typeof window === "undefined") {
+      return "desktop";
+    }
+    return window.localStorage.getItem(VIEW_MODE_KEY) === "mobile" ? "mobile" : "desktop";
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktopViewport(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const toggleViewMode = () => {
+    setViewMode((current) => {
+      const next = current === "desktop" ? "mobile" : "desktop";
+      window.localStorage.setItem(VIEW_MODE_KEY, next);
+      return next;
+    });
+  };
+
+  const shellClassName = `vendor-app ${
+    isDesktopViewport
+      ? viewMode === "desktop"
+        ? "vendor-app-desktop"
+        : "vendor-app-mobile-preview"
+      : ""
+  }`.trim();
   const hideNav =
     pathname === "/painel/vendas" ||
     pathname.startsWith("/painel/a-receber") ||
@@ -33,7 +66,14 @@ export function VendorShell({ children }: { children: React.ReactNode }) {
     /^\/painel\/pedidos\/[^/]+$/.test(pathname);
 
   return (
-    <div className="vendor-app">
+    <div className={shellClassName}>
+      {isDesktopViewport ? (
+        <button className="vendor-view-mode-toggle" onClick={toggleViewMode} type="button">
+          <VendorIcon name="split" size={15} />
+          {viewMode === "desktop" ? "Ver versão mobile" : "Ver versão desktop"}
+        </button>
+      ) : null}
+
       <main className="vendor-main">{children}</main>
 
       {!hideNav ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";
@@ -25,6 +25,7 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [isPending, startTransition] = useTransition();
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const portalUrl = `/loja/${store.slug}`;
   const catalogLink = `${APP_BASE_URL}${portalUrl}`;
@@ -46,6 +47,9 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
       setLogoFile(null);
       setLogoFileName("");
       setLogoPreviewUrl("");
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
       return;
     }
 
@@ -55,6 +59,9 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
       setLogoFile(null);
       setLogoFileName("");
       setLogoPreviewUrl("");
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
       return;
     }
 
@@ -64,6 +71,9 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
       setLogoFile(null);
       setLogoFileName("");
       setLogoPreviewUrl("");
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
       return;
     }
 
@@ -108,6 +118,9 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         setLogoFile(null);
         setLogoFileName("");
         setLogoPreviewUrl("");
+        if (logoInputRef.current) {
+          logoInputRef.current.value = "";
+        }
         setStatus("saved");
         window.setTimeout(() => setStatus("idle"), 2500);
       }
@@ -157,8 +170,23 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
 
         <label className="vendor-field">
           <span>Logo da loja (anexo)</span>
-          <input accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoSelect} type="file" />
-          {logoFileName ? <small className="vendor-settings-slug">Arquivo selecionado: {logoFileName}</small> : null}
+          <div className="vendor-settings-file-row">
+            <input
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="vendor-settings-file-input"
+              id="store-logo-upload"
+              onChange={handleLogoSelect}
+              ref={logoInputRef}
+              type="file"
+            />
+            <label className="vendor-button vendor-button-ghost vendor-settings-upload-btn" htmlFor="store-logo-upload">
+              <VendorIcon name="share" size={16} />
+              Anexar logotipo
+            </label>
+            <span className="vendor-settings-file-name">
+              {logoFileName || (logoUrl ? "Logotipo atual configurado" : "Nenhum arquivo escolhido")}
+            </span>
+          </div>
           {logoUrl || logoPreviewUrl ? (
             <button
               className="vendor-button vendor-button-ghost vendor-settings-clear-logo"
@@ -170,6 +198,9 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
                 setLogoFile(null);
                 setLogoFileName("");
                 setLogoPreviewUrl("");
+                if (logoInputRef.current) {
+                  logoInputRef.current.value = "";
+                }
               }}
               type="button"
             >

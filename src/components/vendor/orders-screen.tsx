@@ -89,15 +89,26 @@ export function OrdersScreen({
     });
   }, [filter, sales]);
 
-  const newCount = catalogOrders.length;
+  const openCatalogOrders = catalogOrders.filter((order) =>
+    ["new", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
+  );
+  const paidCatalogOrders = catalogOrders.filter((order) =>
+    ["paid", "delivering", "delivered"].includes(order.status)
+  );
+
+  const newCount = openCatalogOrders.length;
   const totalCount = sales.length + catalogOrders.length;
 
   const todayStr = todayISO();
   const filterCounts: Record<OrderFilter, number> = {
     all: totalCount,
     new: newCount,
-    paid: sales.filter((s) => getSaleStatus(s.installments) === "paid").length,
-    open: sales.filter((s) => getSaleStatus(s.installments) === "open").length,
+    paid:
+      sales.filter((s) => getSaleStatus(s.installments) === "paid").length +
+      paidCatalogOrders.length,
+    open:
+      sales.filter((s) => getSaleStatus(s.installments) === "open").length +
+      openCatalogOrders.length,
     overdue: sales.filter((s) => getSaleStatus(s.installments) === "overdue").length,
     today: sales.filter((s) => s.installments.some((i) => !i.paid && i.due_date === todayStr)).length
   };
@@ -137,7 +148,11 @@ export function OrdersScreen({
 
       <div className="vendor-orders-list">
         {filter === "new" || filter === "all"
-          ? catalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
+          ? openCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
+          : null}
+
+        {(filter === "paid" || filter === "all")
+          ? paidCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
           : null}
 
         {filter !== "new" && list.length

@@ -9,11 +9,26 @@ import { formatShortDate } from "@/lib/sales/format";
 import type { VendorStoreOrder } from "@/lib/client/queries";
 
 function orderStatusLabel(order: VendorStoreOrder) {
+  if (order.status === "payment_review") {
+    return { label: "Comprovante", tone: "quote" as const };
+  }
+  if (order.status === "awaiting_payment") {
+    return { label: "Aguardando pagto", tone: "quote" as const };
+  }
+  if (order.status === "paid") {
+    return { label: "Pago", tone: "new" as const };
+  }
+  if (order.status === "delivering") {
+    return { label: "Em entrega", tone: "new" as const };
+  }
+  if (order.status === "delivered") {
+    return { label: "Entregue", tone: "new" as const };
+  }
   if (order.order_type === "wholesale") {
     return { label: "Encomenda", tone: "wholesale" as const };
   }
 
-  if (order.status === "quote" || order.order_type === "quote") {
+  if (order.status === "quoted" || order.order_type === "quote") {
     return { label: "Orçamento", tone: "quote" as const };
   }
 

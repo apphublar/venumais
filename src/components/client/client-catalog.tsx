@@ -122,7 +122,7 @@ export function ClientCatalog({
       <div className="client-categories">
         {categories.map((item) => (
           <button
-            className={category === item ? "vendor-filter-chip-active" : "vendor-filter-chip"}
+            className={category === item ? "client-category-chip client-category-chip-active" : "client-category-chip"}
             key={item}
             onClick={() => setCategory(item)}
             type="button"
@@ -132,7 +132,7 @@ export function ClientCatalog({
         ))}
       </div>
 
-      <div className="vendor-section-label" style={{ margin: "10px 18px" }}>
+      <div className="client-catalog-count">
         <span>
           {list.length} {list.length === 1 ? "produto" : "produtos"}
         </span>
@@ -159,29 +159,24 @@ export function ClientCatalog({
               </div>
               <div className="client-product-body">
                 <strong>{product.name}</strong>
-                <div
-                  className="vendor-dashboard-stock-label"
-                  style={{ marginTop: 8, justifyContent: "space-between" }}
-                >
+                <div className="client-product-meta">
                   {product.price_visible ? (
-                    <strong className="vendor-text-success">{formatBRL(price)}</strong>
+                    <strong className="client-product-price">{formatBRL(price)}</strong>
                   ) : (
-                    <span className="vendor-sale-row-installment" style={{ fontSize: "0.72rem" }}>
-                      Sob orçamento
-                    </span>
+                    <span className="client-product-quote">Sob orçamento</span>
                   )}
                   {cart[product.id] > 0 ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <div className="client-product-qty-controls">
                       <button
-                        className="vendor-step-button"
+                        className="client-qty-button"
                         onClick={() => adjustCart(product.id, -1)}
                         type="button"
                       >
                         <VendorIcon name="arrowDown" size={14} />
                       </button>
-                      <span>{cart[product.id]}</span>
+                      <span className="client-product-qty-value">{cart[product.id]}</span>
                       <button
-                        className="vendor-step-button vendor-step-button-primary"
+                        className="client-qty-button client-qty-button-primary"
                         onClick={() => adjustCart(product.id, 1)}
                         type="button"
                       >
@@ -190,7 +185,7 @@ export function ClientCatalog({
                     </div>
                   ) : (
                     <button
-                      className="vendor-step-button vendor-step-button-primary"
+                      className="client-product-add"
                       onClick={() => adjustCart(product.id, 1)}
                       type="button"
                     >

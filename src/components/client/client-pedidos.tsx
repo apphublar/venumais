@@ -9,7 +9,9 @@ import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSectionLabel } from "@/components/vendor/section-label";
 import {
   cancelClientOrderAction,
+  finalizeClientOrderAction,
   getCustomerOrderDetailAction,
+  reportOrderPaymentAction,
   updateClientOrderAction
 } from "@/lib/client/actions";
 import { formatBRL } from "@/lib/products/format";
@@ -30,6 +32,27 @@ function formatLongDate(value: string) {
     month: "long",
     year: "numeric"
   });
+}
+
+type OrderPaymentMethod = "pix" | "cash" | "card";
+
+function orderStatusMeta(status: string) {
+  switch (status) {
+    case "quoted":
+      return { label: "Orçamento enviado", tone: "open" as const };
+    case "awaiting_payment":
+      return { label: "Aguardando pagamento", tone: "warn" as const };
+    case "payment_review":
+      return { label: "Comprovante enviado", tone: "open" as const };
+    case "paid":
+      return { label: "Pago", tone: "paid" as const };
+    case "delivering":
+      return { label: "Em entrega", tone: "open" as const };
+    case "delivered":
+      return { label: "Entregue", tone: "paid" as const };
+    default:
+      return { label: "Novo pedido", tone: "warn" as const };
+  }
 }
 
 export function ClientPedidos({
@@ -53,6 +76,10 @@ export function ClientPedidos({
   const router = useRouter();
   const [filter, setFilter] = useState<OrderFilter>("todos");
   const [editingOrder, setEditingOrder] = useState<PortalOrderDetail | null>(null);
+  const [checkoutOrder, setCheckoutOrder] = useState<PortalOrder | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("pix");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [isLoadingOrder, startLoadingOrder] = useTransition();
   const [isPendingAction, startPendingAction] = useTransition();
 
@@ -80,10 +107,12 @@ export function ClientPedidos({
     [sales]
   );
 
+  const orderOpenStatuses = ["new", "quoted", "awaiting_payment", "payment_review", "delivering"] as const;
+
   const counts = {
     todos: orders.length + sales.length,
-    orcamento: orders.length,
-    aberto: openSales.length + pendingConfirmation.length,
+    orcamento: orders.filter((order) => order.status === "new" || order.status === "quoted").length,
+    aberto: openSales.length + pendingConfirmation.length + orders.filter((order) => orderOpenStatuses.includes(order.status as (typeof orderOpenStatuses)[number])).length,
     quitado: paidSales.length
   };
 
@@ -157,6 +186,50 @@ export function ClientPedidos({
     });
   };
 
+  const handleFinalizeOrder = () => {
+    if (!checkoutOrder) return;
+    startPendingAction(async () => {
+      const result = await finalizeClientOrderAction({
+        storeId: store.id,
+        storeSlug: store.slug,
+        orderId: checkoutOrder.id,
+        paymentMethod,
+        paymentNote
+      });
+      if (result.error) {
+        onToast(result.error);
+        return;
+      }
+      onToast("Pedido confirmado. Agora informe o pagamento.");
+      setCheckoutOrder(null);
+      setPaymentNote("");
+      setPaymentMethod("pix");
+      router.refresh();
+    });
+  };
+
+  const handleReportOrderPayment = (order: PortalOrder) => {
+    if (!paymentProofFile) {
+      onToast("Anexe o comprovante para enviar.");
+      return;
+    }
+    startPendingAction(async () => {
+      const formData = new FormData();
+      formData.set("storeId", store.id);
+      formData.set("storeSlug", store.slug);
+      formData.set("orderId", order.id);
+      formData.set("receipt", paymentProofFile);
+      const result = await reportOrderPaymentAction(formData);
+      if (result.error) {
+        onToast(result.error);
+        return;
+      }
+      setPaymentProofFile(null);
+      onToast("Comprovante enviado para análise da loja.");
+      router.refresh();
+    });
+  };
+
   return (
     <div className="client-main">
       <ClientScreenHeader big subtitle="Compras e orçamentos" title="Meus pedidos" />
@@ -206,28 +279,72 @@ export function ClientPedidos({
                 <VendorCard className="client-quote-card" key={order.id}>
                   <div className="client-sale-card-head">
                     <div>
-                      <strong>Orçamento #{order.order_code}</strong>
+                      <strong>Pedido #{order.order_code}</strong>
                       <span>
                         {formatLongDate(order.created_at)} · {order.item_count}{" "}
                         {order.item_count === 1 ? "item" : "itens"}
                         {order.edited_at ? " · editado" : ""}
                       </span>
                     </div>
-                    <span className="client-badge client-badge-warn">Aguardando</span>
+                    {(() => {
+                      const meta = orderStatusMeta(order.status);
+                      return (
+                        <span className={`client-badge client-badge-${meta.tone}`}>{meta.label}</span>
+                      );
+                    })()}
                   </div>
-                  <div className="client-quote-note">
-                    <VendorIcon name="clock" size={15} />
-                    <span>Aguardando valores da loja</span>
-                  </div>
+                  {order.total_amount !== null ? (
+                    <div className="client-sale-card-foot">
+                      <div>
+                        <span>Total</span>
+                        <strong>{formatBRL(order.total_amount)}</strong>
+                      </div>
+                      <div>
+                        <span>Tipo</span>
+                        <strong>{order.delivery_type === "delivery" ? "Entrega" : "Retirada"}</strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="client-quote-note">
+                      <VendorIcon name="clock" size={15} />
+                      <span>Aguardando valores da loja</span>
+                    </div>
+                  )}
+                  {order.status === "awaiting_payment" && order.customer_payment_method === "card" ? (
+                    <div className="client-quote-note">
+                      <VendorIcon name="wallet" size={15} />
+                      <span>
+                        {order.vendor_payment_link ? (
+                          <a href={order.vendor_payment_link} rel="noopener noreferrer" target="_blank">
+                            Abrir link de pagamento
+                          </a>
+                        ) : (
+                          "Aguardando a loja enviar o link de pagamento"
+                        )}
+                      </span>
+                    </div>
+                  ) : null}
+                  {order.status === "delivering" && order.tracking_url ? (
+                    <div className="client-quote-note">
+                      <VendorIcon name="truck" size={15} />
+                      <span>
+                        <a href={order.tracking_url} rel="noopener noreferrer" target="_blank">
+                          Rastrear entrega ({order.tracking_code || "link"})
+                        </a>
+                      </span>
+                    </div>
+                  ) : null}
                   <div
                     style={{
                       display: "flex",
                       gap: 8,
-                      marginTop: 10
+                      marginTop: 10,
+                      flexWrap: "wrap"
                     }}
                   >
                     <button
                       className="vendor-button vendor-button-ghost"
+                      disabled={isPendingAction || !(order.status === "new" || order.status === "quoted")}
                       onClick={() => handleOpenQuoteEditor(order.id)}
                       style={{ flex: 1 }}
                       type="button"
@@ -235,8 +352,43 @@ export function ClientPedidos({
                       <VendorIcon name="edit" size={15} />
                       Editar
                     </button>
+                    {order.total_amount !== null && (order.status === "new" || order.status === "quoted") ? (
+                      <button
+                        className="vendor-button vendor-button-primary"
+                        onClick={() => setCheckoutOrder(order)}
+                        style={{ flex: 1 }}
+                        type="button"
+                      >
+                        <VendorIcon name="check" size={15} />
+                        Finalizar pedido
+                      </button>
+                    ) : null}
+                    {order.status === "awaiting_payment" ? (
+                      <>
+                        <label className="client-order-proof-upload">
+                          <input
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={(event) => setPaymentProofFile(event.target.files?.[0] ?? null)}
+                            type="file"
+                          />
+                          <VendorIcon name="share" size={14} />
+                          {paymentProofFile ? paymentProofFile.name : "Anexar comprovante"}
+                        </label>
+                        <button
+                          className="vendor-button vendor-button-primary"
+                          disabled={isPendingAction}
+                          onClick={() => handleReportOrderPayment(order)}
+                          style={{ flex: 1 }}
+                          type="button"
+                        >
+                          <VendorIcon name="check" size={15} />
+                          Enviar comprovante
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       className="vendor-button vendor-button-danger"
+                      disabled={isPendingAction || !(order.status === "new" || order.status === "quoted")}
                       onClick={() => handleCancelQuote(order.id)}
                       style={{ flex: 1 }}
                       type="button"
@@ -291,6 +443,56 @@ export function ClientPedidos({
           order={editingOrder}
           products={products}
         />
+      ) : null}
+      {checkoutOrder ? (
+        <ClientOverlay>
+          <ClientScreenHeader
+            onBack={() => setCheckoutOrder(null)}
+            subtitle={`Pedido #${String(checkoutOrder.order_code).padStart(4, "0")}`}
+            title="Finalizar pedido"
+          />
+          <div className="client-screen-body">
+            <VendorSectionLabel>Forma de pagamento</VendorSectionLabel>
+            <div className="client-cart-delivery">
+              <button className={paymentMethod === "pix" ? "is-active" : ""} onClick={() => setPaymentMethod("pix")} type="button">
+                PIX
+              </button>
+              <button className={paymentMethod === "cash" ? "is-active" : ""} onClick={() => setPaymentMethod("cash")} type="button">
+                Dinheiro
+              </button>
+              <button className={paymentMethod === "card" ? "is-active" : ""} onClick={() => setPaymentMethod("card")} type="button">
+                Cartão
+              </button>
+            </div>
+            <VendorSectionLabel>Observação do pagamento</VendorSectionLabel>
+            <textarea
+              className="client-cart-notes"
+              onChange={(event) => setPaymentNote(event.target.value)}
+              placeholder="Ex.: Vou pagar na entrega / cartão no link..."
+              rows={3}
+              value={paymentNote}
+            />
+            <VendorCard className="client-sale-card">
+              <div className="client-sale-card-foot" style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
+                <div>
+                  <span>Total do pedido</span>
+                  <strong>{formatBRL(checkoutOrder.total_amount ?? 0)}</strong>
+                </div>
+              </div>
+            </VendorCard>
+          </div>
+          <div className="client-overlay-footer" style={{ display: "grid", gap: 8 }}>
+            <button
+              className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
+              disabled={isPendingAction}
+              onClick={handleFinalizeOrder}
+              type="button"
+            >
+              <VendorIcon name="check" size={16} />
+              Confirmar e enviar ao vendedor
+            </button>
+          </div>
+        </ClientOverlay>
       ) : null}
     </div>
   );
