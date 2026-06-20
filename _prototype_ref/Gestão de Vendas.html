@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestão de Vendas — Crediário Digital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f7f5;
+    --card: #ffffff;
+    --ink-1: #112019;
+    --ink-2: #3d4a44;
+    --ink-3: #7c8a83;
+    --line: #e8edea;
+    --line-2: #cbd5cf;
+    --chip: #eef2f0;
+    --green-50: #e7f6ef;
+    --green-600: #128a5d;
+    --green-700: #0e6e4a;
+    --brand-g1: #15a06a;
+    --brand-g2: #0d7a50;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    color: var(--ink-1);
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #eef2ef 0%, #e6eae7 55%, #dfe4e0 100%);
+  }
+  body { min-height: 100vh; }
+  input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: .85; }
+  .cat-search::placeholder { color: rgba(255,255,255,0.8); }
+  button { -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  @keyframes notifDown { from { opacity: 0; transform: translateY(-120%); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js?v=4"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="ui.jsx?v=3"></script>
+<script type="text/babel" src="vendor-screens.jsx?v=4"></script>
+<script type="text/babel" src="vendor-detail.jsx?v=3"></script>
+<script type="text/babel" src="vendor-flow.jsx?v=3"></script>
+<script type="text/babel" src="vendor-auth.jsx"></script>
+<script type="text/babel" src="team.jsx?v=3"></script>
+<script type="text/babel" src="vendas.jsx?v=3"></script>
+<script type="text/babel" src="produto-form.jsx?v=3"></script>
+<script type="text/babel" src="cliente-form.jsx?v=5"></script>
+<script type="text/babel" src="cupom.jsx?v=3"></script>
+<script type="text/babel" src="notificacoes.jsx?v=3"></script>
+<script type="text/babel" src="recibo.jsx?v=4"></script>
+<script type="text/babel" src="pedidos.jsx?v=5"></script>
+<script type="text/babel" src="client.jsx?v=4"></script>
+<script type="text/babel" src="app.jsx?v=3"></script>
+</body>
+</html>

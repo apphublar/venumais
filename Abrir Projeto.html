@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VendeFácil — Abrir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-1: #112019; --ink-2: #3d4a44; --ink-3: #7c8a83;
+    --card: #ffffff; --line: #e8edea; --green-50: #e7f6ef; --green-600: #128a5d; --green-700: #0e6e4a;
+    --g1: #15a06a; --g2: #0d7a50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; color: var(--ink-1);
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+    background: radial-gradient(1100px 560px at 50% -8%, #eef2ef 0%, #e6eae7 55%, #dfe4e0 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 24px; letter-spacing: -.02em; margin-bottom: 8px; }
+  .logo { width: 46px; height: 46px; border-radius: 13px; background: linear-gradient(135deg, var(--g1), var(--g2)); display: grid; place-items: center; color: #fff; box-shadow: 0 6px 16px rgba(18,138,93,.32); }
+  .sub { color: var(--ink-3); font-weight: 500; font-size: 15.5px; text-align: center; margin-bottom: 34px; max-width: 440px; line-height: 1.5; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; max-width: 720px; }
+  @media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px;
+    cursor: pointer; transition: transform .15s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column;
+    box-shadow: 0 2px 6px rgba(16,32,24,.04);
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 20px 44px rgba(16,32,24,.12); border-color: transparent; }
+  .ic { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; margin-bottom: 18px; color: #fff; }
+  .ic.site { background: linear-gradient(135deg, var(--g1), var(--g2)); }
+  .ic.app { background: var(--ink-1); }
+  .card h2 { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+  .card p { font-size: 14px; color: var(--ink-2); font-weight: 500; margin-top: 7px; flex: 1; line-height: 1.5; }
+  .go { display: inline-flex; align-items: center; gap: 7px; margin-top: 20px; font-weight: 800; font-size: 14.5px; color: var(--green-700); }
+  .card.app .go { color: var(--ink-1); }
+  .tag { display:inline-flex; align-items:center; gap:6px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-3); background: var(--green-50); color: var(--green-700); padding: 5px 11px; border-radius: 999px; align-self: flex-start; margin-bottom: 16px; }
+  .foot { margin-top: 30px; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <span class="logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5v9A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5ZM3 10h18"/></svg></span>
+    VendeFácil
+  </div>
+  <p class="sub">Sistema de vendas e crediário digital. Escolha o que você quer abrir:</p>
+
+  <div class="cards">
+    <a class="card site" href="Site VendeFácil.html">
+      <span class="tag">Página pública</span>
+      <div class="ic site"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+      <h2>Ver o site</h2>
+      <p>A landing page de divulgação do VendeFácil — recursos, planos e demonstração.</p>
+      <span class="go">Abrir site <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>
+    </a>
+
+    <a class="card app" href="Gestão de Vendas.html">
+      <span class="tag">Aplicativo</span>
+      <div class="ic app"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/></svg></div>
+      <h2>Abrir o app</h2>
+      <p>O sistema completo: painel do vendedor e portal do cliente, prontos para usar.</p>
+      <span class="go">Abrir app <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg></span>
+    </a>
+  </div>
+
+  <div class="foot">© 2026 VendeFácil · Vendas e crediário no controle</div>
+</body>
+</html>

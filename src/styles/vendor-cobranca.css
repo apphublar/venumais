@@ -1,0 +1,255 @@
+.vendor-agenda-row-button {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+
+.vendor-sheet-tall {
+  max-height: 88vh;
+}
+
+.vendor-cobranca-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.vendor-cobranca-head strong,
+.vendor-cobranca-head span {
+  display: block;
+}
+
+.vendor-cobranca-head span {
+  margin-top: 2px;
+  color: var(--vendor-ink-3);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.vendor-cobranca-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.vendor-cobranca-amount {
+  padding: 16px;
+  border: 1px solid var(--vendor-line);
+  border-radius: 16px;
+  background: var(--vendor-card);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.vendor-cobranca-amount span,
+.vendor-cobranca-amount strong {
+  display: block;
+}
+
+.vendor-cobranca-amount span {
+  color: var(--vendor-ink-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vendor-cobranca-amount strong {
+  margin-top: 2px;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.vendor-cobranca-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 2px 8px;
+  color: var(--vendor-ink-3);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.vendor-cobranca-message {
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  background: #e7f8ee;
+  color: #0f3b27;
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.vendor-cobranca-pix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 13px 14px;
+  border: 1px dashed var(--vendor-line-2);
+  border-radius: 14px;
+  background: var(--vendor-card);
+  cursor: pointer;
+  text-align: left;
+}
+
+.vendor-cobranca-pix span {
+  flex: 1;
+  overflow: hidden;
+  color: var(--vendor-ink-2);
+  font-family: monospace;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendor-cobranca-pix em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--vendor-ink-1);
+  font-style: normal;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.vendor-cobranca-whats-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  border: none;
+  border-radius: 14px;
+  background: #25d366;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vendor-cobranca-confirm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--vendor-green-700);
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vendor-cobranca-confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vendor-batch-cobranca-intro {
+  margin: 0 2px 14px;
+  color: var(--vendor-ink-2);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.vendor-batch-cobranca-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 9px;
+  padding: 12px 13px;
+  border: 1px solid var(--vendor-line);
+  border-radius: 14px;
+  background: var(--vendor-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.vendor-batch-cobranca-row.is-selected {
+  border-color: var(--vendor-green-600);
+}
+
+.vendor-batch-cobranca-row.is-dimmed {
+  opacity: 0.55;
+}
+
+.vendor-batch-cobranca-row-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.vendor-batch-cobranca-row-copy strong,
+.vendor-batch-cobranca-row-copy span {
+  display: block;
+}
+
+.vendor-batch-cobranca-row-copy strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendor-batch-cobranca-row-copy span {
+  margin-top: 1px;
+  color: var(--vendor-ink-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.vendor-batch-cobranca-overdue {
+  color: #dc2626;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.vendor-batch-cobranca-check {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 2px solid var(--vendor-line-2);
+  border-radius: 7px;
+  background: transparent;
+  color: #fff;
+}
+
+.vendor-batch-cobranca-check.is-on {
+  border-color: var(--vendor-green-600);
+  background: var(--vendor-green-600);
+}
+
+.vendor-batch-cobranca-progress {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: var(--vendor-green-600);
+}
+
+.vendor-batch-cobranca-send {
+  margin-top: 6px;
+  opacity: 1;
+}
+
+.vendor-batch-cobranca-send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
