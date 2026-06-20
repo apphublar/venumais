@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";
-import { updateStoreAction } from "@/lib/stores/actions";
+import { updateStoreAction, uploadStoreLogoAction } from "@/lib/stores/actions";
 import type { Store } from "@/lib/database/types";
 
 const BRAND_PRESETS = ["#11885b", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#0f766e"];
+const BRAND_TEXT_PRESETS = ["#ffffff", "#f8fafc", "#1f2937", "#111827", "#0f172a"];
+const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://venumais.vercel.app").replace(/\/+$/, "");
 
 export function StoreSettingsScreen({ store }: { store: Store }) {
   const [name, setName] = useState(store.name);
@@ -15,20 +17,85 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
   const [pixKey, setPixKey] = useState(store.pix_key ?? "");
   const [pixReceiver, setPixReceiver] = useState(store.pix_receiver_name ?? "");
   const [brandColor, setBrandColor] = useState(store.brand_color ?? "#11885b");
+  const [brandTextColor, setBrandTextColor] = useState(store.brand_text_color ?? "#ffffff");
   const [logoUrl, setLogoUrl] = useState(store.logo_url ?? "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoFileName, setLogoFileName] = useState("");
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const portalUrl = `/loja/${store.slug}`;
+  const catalogLink = `${APP_BASE_URL}${portalUrl}`;
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+    };
+  }, [logoPreviewUrl]);
+
+  const handleLogoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = event.target.files?.[0] ?? null;
+    if (!selected) {
+      if (logoPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(logoPreviewUrl);
+      }
+      setLogoFile(null);
+      setLogoFileName("");
+      setLogoPreviewUrl("");
+      return;
+    }
+
+    if (selected.size > 3 * 1024 * 1024) {
+      setStatus("error");
+      setErrorMsg("A logo deve ter no máximo 3MB.");
+      setLogoFile(null);
+      setLogoFileName("");
+      setLogoPreviewUrl("");
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(selected.type)) {
+      setStatus("error");
+      setErrorMsg("Formato inválido. Envie PNG, JPG, WEBP ou SVG.");
+      setLogoFile(null);
+      setLogoFileName("");
+      setLogoPreviewUrl("");
+      return;
+    }
+
+    setStatus("idle");
+    if (logoPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreviewUrl);
+    }
+    setLogoFile(selected);
+    setLogoFileName(selected.name);
+    setLogoPreviewUrl(URL.createObjectURL(selected));
+  };
 
   const handleSave = () => {
     startTransition(async () => {
       setStatus("idle");
+      let nextLogoUrl = logoUrl;
+
+      if (logoFile) {
+        const upload = await uploadStoreLogoAction(logoFile);
+        if (upload.error || !upload.url) {
+          setErrorMsg(upload.error ?? "Não foi possível enviar a logo.");
+          setStatus("error");
+          return;
+        }
+        nextLogoUrl = upload.url;
+      }
+
       const result = await updateStoreAction({
         name,
         brand_color: brandColor,
-        logo_url: logoUrl,
+        brand_text_color: brandTextColor,
+        logo_url: nextLogoUrl,
         catalog_tagline: tagline,
         pix_key: pixKey,
         pix_receiver_name: pixReceiver
@@ -37,6 +104,10 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         setErrorMsg(result.error);
         setStatus("error");
       } else {
+        setLogoUrl(nextLogoUrl);
+        setLogoFile(null);
+        setLogoFileName("");
+        setLogoPreviewUrl("");
         setStatus("saved");
         window.setTimeout(() => setStatus("idle"), 2500);
       }
@@ -73,8 +144,8 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         <div className="vendor-section-label">Personalização da marca</div>
 
         <div className="vendor-settings-brand-card">
-          {logoUrl ? (
-            <img alt={`Logo da loja ${name}`} className="vendor-settings-logo-preview" src={logoUrl} />
+          {logoPreviewUrl || logoUrl ? (
+            <img alt={`Logo da loja ${name}`} className="vendor-settings-logo-preview" src={logoPreviewUrl || logoUrl} />
           ) : (
             <VendorBrandMark label={name} onLight size={56} />
           )}
@@ -85,12 +156,26 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         </div>
 
         <label className="vendor-field">
-          <span>URL da logo (opcional)</span>
-          <input
-            onChange={(event) => setLogoUrl(event.target.value)}
-            placeholder="https://sua-loja.com/logo.png"
-            value={logoUrl}
-          />
+          <span>Logo da loja (anexo)</span>
+          <input accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={handleLogoSelect} type="file" />
+          {logoFileName ? <small className="vendor-settings-slug">Arquivo selecionado: {logoFileName}</small> : null}
+          {logoUrl || logoPreviewUrl ? (
+            <button
+              className="vendor-button vendor-button-ghost vendor-settings-clear-logo"
+              onClick={() => {
+                if (logoPreviewUrl.startsWith("blob:")) {
+                  URL.revokeObjectURL(logoPreviewUrl);
+                }
+                setLogoUrl("");
+                setLogoFile(null);
+                setLogoFileName("");
+                setLogoPreviewUrl("");
+              }}
+              type="button"
+            >
+              Remover logo
+            </button>
+          ) : null}
           <small className="vendor-settings-slug">Use uma imagem quadrada para melhor resultado.</small>
         </label>
 
@@ -123,13 +208,45 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
           </div>
         </label>
 
+        <label className="vendor-field">
+          <span>Cor dos textos sobre a cor da marca</span>
+          <div className="vendor-settings-color-input-row">
+            <input
+              className="vendor-settings-color-input"
+              onChange={(event) => setBrandTextColor(event.target.value)}
+              type="color"
+              value={brandTextColor}
+            />
+            <input
+              onChange={(event) => setBrandTextColor(event.target.value)}
+              placeholder="#FFFFFF"
+              value={brandTextColor}
+            />
+          </div>
+          <div className="vendor-settings-color-row">
+            {BRAND_TEXT_PRESETS.map((color) => (
+              <button
+                aria-label={`Aplicar texto ${color}`}
+                className={`vendor-settings-color-chip ${brandTextColor.toLowerCase() === color ? "is-active" : ""}`}
+                key={color}
+                onClick={() => setBrandTextColor(color)}
+                style={{ background: color }}
+                type="button"
+              />
+            ))}
+          </div>
+          <small className="vendor-settings-slug">
+            Ajuste para manter contraste quando usar uma cor de marca clara.
+          </small>
+        </label>
+
         <div className="vendor-field">
           <span>Link do catálogo (app do cliente)</span>
           <div className="vendor-portal-link-row">
-            <input readOnly value={`localhost:3000${portalUrl}`} />
+            <input readOnly value={catalogLink} />
             <a
               className="vendor-button vendor-button-ghost vendor-portal-link-btn"
-              href={portalUrl}
+              href={catalogLink}
               rel="noopener noreferrer"
               target="_blank"
             >

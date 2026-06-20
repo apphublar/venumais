@@ -11,6 +11,7 @@ export type Store = {
   slug: string;
   logo_url?: string | null;
   brand_color: string;
+  brand_text_color?: string | null;
   status: string;
   currency: string;
   timezone: string;

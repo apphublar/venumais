@@ -460,7 +460,7 @@ function CustomerStep({
         <span className="vendor-new-customer-cta-icon">
           <VendorIcon name="plus" size={22} />
         </span>
-        <span>
+        <span className="vendor-new-customer-cta-copy">
           <strong>Cadastrar novo cliente</strong>
           <span>Adicione na hora e continue a venda</span>
         </span>

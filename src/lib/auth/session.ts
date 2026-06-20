@@ -42,7 +42,7 @@ export async function getActiveStore(userId: string): Promise<UserStore | null> 
   const { data } = await supabase
     .from("store_members")
     .select(
-      "role, stores(id, name, slug, logo_url, brand_color, status, currency, timezone, pix_key, pix_receiver_name, catalog_tagline)"
+      "role, stores(id, name, slug, logo_url, brand_color, brand_text_color, status, currency, timezone, pix_key, pix_receiver_name, catalog_tagline)"
     )
     .eq("user_id", userId)
     .eq("status", "active")

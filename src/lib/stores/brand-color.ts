@@ -30,9 +30,13 @@ function rgbToHex(color: { r: number; g: number; b: number }) {
     .join("")}`;
 }
 
-export function getBrandColorVars(brandColor: string) {
+export function getBrandColorVars(brandColor: string, brandTextColor?: string | null) {
   const rgb = hexToRgb(brandColor) ?? hexToRgb("#11885b");
   if (!rgb) {
+    return {};
+  }
+  const onRgb = hexToRgb(brandTextColor ?? "") ?? hexToRgb("#ffffff");
+  if (!onRgb) {
     return {};
   }
 
@@ -40,8 +44,14 @@ export function getBrandColorVars(brandColor: string) {
   const dark = mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.18);
   const gradientLight = mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.06);
   const gradientDark = mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.24);
+  const onHex = rgbToHex(onRgb);
+  const onStrong = `${onRgb.r} ${onRgb.g} ${onRgb.b}`;
 
   return {
+    "--vendor-brand-on": onHex,
+    "--vendor-brand-on-rgb": onStrong,
+    "--client-brand-on": onHex,
+    "--client-brand-on-rgb": onStrong,
     "--vendor-brand-g1": rgbToHex(gradientLight),
     "--vendor-brand-g2": rgbToHex(gradientDark),
     "--client-brand-g1": rgbToHex(light),

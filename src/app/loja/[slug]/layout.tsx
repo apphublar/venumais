@@ -23,7 +23,9 @@ type LojaLayoutProps = {
 export default async function LojaLayout({ children, params }: LojaLayoutProps) {
   const { slug } = await params;
   const store = await getPublicStoreBySlug(slug).catch(() => null);
-  const brandStyle = store ? (getBrandColorVars(store.brand_color) as React.CSSProperties) : undefined;
+  const brandStyle = store
+    ? (getBrandColorVars(store.brand_color, store.brand_text_color) as React.CSSProperties)
+    : undefined;
 
   return (
     <div className={hanken.variable} style={brandStyle}>

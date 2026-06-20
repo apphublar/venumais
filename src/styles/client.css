@@ -14,6 +14,8 @@
   --client-green-700: #0e6e4a;
   --client-brand-g1: #15a06a;
   --client-brand-g2: #0d7a50;
+  --client-brand-on: #ffffff;
+  --client-brand-on-rgb: 255 255 255;
 }
 
 .client-app {
@@ -108,7 +110,7 @@
 .client-hero {
   padding: 16px 18px 18px;
   background: linear-gradient(135deg, var(--client-brand-g1), var(--client-brand-g2));
-  color: #fff;
+  color: var(--client-brand-on);
 }
 
 .client-hero-top {
@@ -132,7 +134,7 @@
   margin-top: 2px;
   font-size: 0.78rem;
   font-weight: 600;
-  opacity: 0.85;
+  color: rgb(var(--client-brand-on-rgb) / 0.85);
 }
 
 .client-search {
@@ -151,12 +153,12 @@
   border: none;
   outline: none;
   background: none;
-  color: #fff;
+  color: var(--client-brand-on);
   font-size: 0.95rem;
 }
 
 .client-search input::placeholder {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(var(--client-brand-on-rgb) / 0.75);
 }
 
 .client-categories {
@@ -177,7 +179,7 @@
   position: relative;
   padding: 36px 24px 26px;
   background: linear-gradient(135deg, var(--client-brand-g1), var(--client-brand-g2));
-  color: #fff;
+  color: var(--client-brand-on);
   text-align: center;
   border-radius: 0 0 26px 26px;
 }
@@ -192,8 +194,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18);
+  color: var(--client-brand-on);
+  background: rgb(var(--client-brand-on-rgb) / 0.18);
   cursor: pointer;
 }
 
@@ -640,7 +642,7 @@
 .client-filter-chip-active {
   border-color: var(--client-green-600);
   background: var(--client-green-600);
-  color: #fff;
+  color: var(--client-brand-on);
 }
 
 .client-empty-inline {
@@ -767,7 +769,7 @@
   height: 42px;
   border-radius: 12px;
   background: var(--client-green-600);
-  color: #fff;
+  color: var(--client-brand-on);
   flex-shrink: 0;
 }
 
@@ -790,7 +792,7 @@
   padding: 18px 20px;
   border-radius: 20px;
   background: linear-gradient(135deg, var(--client-brand-g1), var(--client-brand-g2));
-  color: #fff;
+  color: var(--client-brand-on);
 }
 
 .client-next-installment > span {

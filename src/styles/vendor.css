@@ -12,6 +12,8 @@
   --vendor-green-700: #0e6e4a;
   --vendor-brand-g1: #15a06a;
   --vendor-brand-g2: #0d7a50;
+  --vendor-brand-on: #ffffff;
+  --vendor-brand-on-rgb: 255 255 255;
 }
 
 .vendor-app {
@@ -36,7 +38,7 @@
   gap: 12px;
   padding: 14px 16px 10px;
   background: linear-gradient(135deg, var(--vendor-green-600), var(--vendor-green-700));
-  color: #fff;
+  color: var(--vendor-brand-on);
 }
 
 .vendor-topbar strong,
@@ -51,17 +53,17 @@
 
 .vendor-topbar span {
   margin-top: 2px;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgb(var(--vendor-brand-on-rgb) / 0.78);
   font-size: 0.76rem;
   font-weight: 700;
 }
 
 .vendor-topbar-logout {
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgb(var(--vendor-brand-on-rgb) / 0.24);
   border-radius: 999px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: rgb(var(--vendor-brand-on-rgb) / 0.12);
+  color: var(--vendor-brand-on);
   font-weight: 800;
   cursor: pointer;
 }
@@ -135,7 +137,7 @@
   border: 4px solid var(--vendor-card);
   border-radius: 18px;
   background: var(--vendor-green-600);
-  color: #fff;
+  color: var(--vendor-brand-on);
   display: grid;
   place-items: center;
   box-shadow: 0 6px 18px rgba(18, 138, 93, 0.4);
@@ -190,7 +192,7 @@
 .vendor-icon-button-primary {
   border: none;
   background: var(--vendor-green-600);
-  color: #fff;
+  color: var(--vendor-brand-on);
 }
 
 .vendor-card {
@@ -392,7 +394,7 @@ button.vendor-card {
 
 .vendor-button-primary {
   background: var(--vendor-green-600);
-  color: #fff;
+  color: var(--vendor-brand-on);
   box-shadow: 0 2px 8px rgba(18, 138, 93, 0.28);
 }
 
@@ -1152,6 +1154,7 @@ button.vendor-card {
 .vendor-success-hint {
   margin-top: 20px;
   width: 100%;
+  padding: 12px 14px;
   text-align: left;
   display: flex;
   gap: 11px;
@@ -1227,20 +1230,21 @@ button.vendor-card {
   display: grid;
   width: 40px;
   height: 40px;
+  min-width: 40px;
   place-items: center;
   border-radius: 50%;
   background: var(--vendor-green-600);
-  color: #fff;
+  color: var(--vendor-brand-on);
   flex-shrink: 0;
 }
 
-.vendor-new-customer-cta strong {
+.vendor-new-customer-cta-copy strong {
   display: block;
   font-size: 0.9rem;
   color: var(--vendor-green-700);
 }
 
-.vendor-new-customer-cta span {
+.vendor-new-customer-cta-copy span {
   display: block;
   margin-top: 1px;
   font-size: 0.75rem;
@@ -1273,7 +1277,7 @@ button.vendor-card {
 .vendor-category-chip-active {
   border-color: var(--vendor-green-600);
   background: var(--vendor-green-600);
-  color: #fff;
+  color: var(--vendor-brand-on);
 }
 
 /* ── Qty controls (items step) ── */
@@ -4439,6 +4443,13 @@ button.vendor-card {
 
 .vendor-settings-color-chip.is-active {
   box-shadow: 0 0 0 2px var(--vendor-ink-1);
+}
+
+.vendor-settings-clear-logo {
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  width: fit-content;
 }
 
 .vendor-recibo-paper {

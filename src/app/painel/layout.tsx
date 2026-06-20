@@ -17,7 +17,7 @@ export default async function PainelLayout({
   children: React.ReactNode;
 }) {
   const { store } = await requireStoreAccess();
-  const brandVars = getBrandColorVars(store.brand_color);
+  const brandVars = getBrandColorVars(store.brand_color, store.brand_text_color);
 
   return (
     <div className={hanken.variable} style={brandVars as React.CSSProperties}>
