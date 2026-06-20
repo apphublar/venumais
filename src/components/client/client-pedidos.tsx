@@ -38,6 +38,7 @@ type OrderPaymentMethod = "pix" | "cash" | "card";
 
 function orderStatusMeta(status: string) {
   switch (status) {
+    case "quote":
     case "quoted":
       return { label: "Orçamento enviado", tone: "open" as const };
     case "awaiting_payment":
@@ -107,11 +108,11 @@ export function ClientPedidos({
     [sales]
   );
 
-  const orderOpenStatuses = ["new", "quoted", "awaiting_payment", "payment_review", "delivering"] as const;
+  const orderOpenStatuses = ["new", "quote", "quoted", "awaiting_payment", "payment_review", "delivering"] as const;
 
   const counts = {
     todos: orders.length + sales.length,
-    orcamento: orders.filter((order) => order.status === "new" || order.status === "quoted").length,
+    orcamento: orders.filter((order) => order.status === "new" || order.status === "quote" || order.status === "quoted").length,
     aberto: openSales.length + pendingConfirmation.length + orders.filter((order) => orderOpenStatuses.includes(order.status as (typeof orderOpenStatuses)[number])).length,
     quitado: paidSales.length
   };
@@ -344,7 +345,7 @@ export function ClientPedidos({
                   >
                     <button
                       className="vendor-button vendor-button-ghost"
-                      disabled={isPendingAction || !(order.status === "new" || order.status === "quoted")}
+                      disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
                       onClick={() => handleOpenQuoteEditor(order.id)}
                       style={{ flex: 1 }}
                       type="button"
@@ -352,7 +353,7 @@ export function ClientPedidos({
                       <VendorIcon name="edit" size={15} />
                       Editar
                     </button>
-                    {order.total_amount !== null && (order.status === "new" || order.status === "quoted") ? (
+                    {order.total_amount !== null && (order.status === "new" || order.status === "quote" || order.status === "quoted") ? (
                       <button
                         className="vendor-button vendor-button-primary"
                         onClick={() => setCheckoutOrder(order)}
@@ -388,7 +389,7 @@ export function ClientPedidos({
                     ) : null}
                     <button
                       className="vendor-button vendor-button-danger"
-                      disabled={isPendingAction || !(order.status === "new" || order.status === "quoted")}
+                      disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
                       onClick={() => handleCancelQuote(order.id)}
                       style={{ flex: 1 }}
                       type="button"

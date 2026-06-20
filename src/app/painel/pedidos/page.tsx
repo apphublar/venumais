@@ -27,7 +27,7 @@ export default async function PedidosPage({ searchParams }: PedidosPageProps) {
 
   const receivableTotal = installments.reduce((total, row) => total + row.amount, 0);
   const newCount = catalogOrders.filter((order) =>
-    ["new", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
+    ["new", "quote", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
   ).length;
 
   return (

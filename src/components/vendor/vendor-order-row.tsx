@@ -28,7 +28,7 @@ function orderStatusLabel(order: VendorStoreOrder) {
     return { label: "Encomenda", tone: "wholesale" as const };
   }
 
-  if (order.status === "quoted" || order.order_type === "quote") {
+  if (order.status === "quoted" || order.status === "quote" || order.order_type === "quote") {
     return { label: "Orçamento", tone: "quote" as const };
   }
 

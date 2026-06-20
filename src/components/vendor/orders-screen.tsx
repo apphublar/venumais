@@ -90,7 +90,7 @@ export function OrdersScreen({
   }, [filter, sales]);
 
   const openCatalogOrders = catalogOrders.filter((order) =>
-    ["new", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
+    ["new", "quote", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
   );
   const paidCatalogOrders = catalogOrders.filter((order) =>
     ["paid", "delivering", "delivered"].includes(order.status)

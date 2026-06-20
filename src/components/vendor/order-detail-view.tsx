@@ -31,7 +31,7 @@ function orderTitle(order: StoreOrderDetail) {
     return `Encomenda #${order.order_code}`;
   }
 
-  if (order.status === "quoted" || order.order_type === "quote") {
+  if ((order.status === "quoted" || order.status === "quote") || order.order_type === "quote") {
     return `Orçamento #${order.order_code}`;
   }
 
@@ -63,7 +63,7 @@ export function OrderDetailView({
   const [paymentMessage, setPaymentMessage] = useState(order.vendor_payment_message ?? "");
 
   const needsPricing = order.items.some((item) => item.unit_price === null);
-  const isQuote = order.status === "quoted" || order.order_type === "quote";
+  const isQuote = order.status === "quoted" || order.status === "quote" || order.order_type === "quote";
   const isWholesale = order.order_type === "wholesale";
   const address = formatCustomerAddress(order.customer);
   const awaitingPayment = order.status === "awaiting_payment";
@@ -173,7 +173,7 @@ export function OrderDetailView({
           ) : null}
           <span className="vendor-order-status vendor-order-status-new">
             {order.status === "new" && "Novo pedido"}
-            {order.status === "quoted" && "Orçamento enviado"}
+            {(order.status === "quoted" || order.status === "quote") && "Orçamento enviado"}
             {order.status === "awaiting_payment" && "Aguardando pagamento"}
             {order.status === "payment_review" && "Comprovante enviado"}
             {order.status === "paid" && "Pago"}
