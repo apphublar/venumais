@@ -41,7 +41,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 72px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
 .client-bottom-nav {
@@ -119,6 +119,10 @@
   gap: 12px;
 }
 
+.client-hero-top > div {
+  min-width: 0;
+}
+
 .client-hero-top strong,
 .client-hero-top span {
   display: block;
@@ -128,6 +132,8 @@
   font-size: 1.12rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .client-hero-top span {
@@ -135,6 +141,8 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: rgb(var(--client-brand-on-rgb) / 0.85);
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-search {
@@ -146,6 +154,19 @@
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(4px);
+}
+
+.client-search button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgb(var(--client-brand-on-rgb) / 0.2);
+  color: var(--client-brand-on);
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .client-search input {
@@ -641,11 +662,17 @@
   min-width: 0;
 }
 
+.client-screen-header-main > div {
+  min-width: 0;
+}
+
 .client-screen-header h1 {
   margin: 0;
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .client-screen-header p {
@@ -653,6 +680,8 @@
   color: var(--client-ink-3);
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-screen-header-big h1 {
@@ -788,14 +817,20 @@
 .client-sale-card-head,
 .client-quote-card .client-sale-card-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.client-sale-card-head > div:first-child {
+  min-width: 0;
 }
 
 .client-sale-card-head strong {
   display: block;
   font-size: 0.92rem;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .client-sale-card-head span {
@@ -804,12 +839,16 @@
   color: var(--client-ink-3);
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-sale-card-foot {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px 12px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--client-line);
@@ -834,7 +873,7 @@
 
 .client-quote-note {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
@@ -848,17 +887,22 @@
   color: #92400e;
   font-weight: 800;
   text-decoration: none;
+  word-break: break-word;
 }
 
 .client-confirm-banner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 10px;
   padding: 14px;
   border: 1px solid var(--client-green-600);
   background: var(--client-green-50);
   text-align: left;
+}
+
+.client-confirm-banner > div {
+  min-width: 0;
 }
 
 .client-confirm-banner-icon {
@@ -884,6 +928,8 @@
   color: var(--client-ink-2);
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-next-installment {
@@ -899,6 +945,8 @@
   font-size: 0.78rem;
   font-weight: 600;
   opacity: 0.85;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-next-installment > strong {
@@ -935,7 +983,8 @@
 
 .client-installment-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 9px;
   padding: 13px;
@@ -972,11 +1021,14 @@
 
 .client-installment-copy {
   flex: 1;
+  min-width: 0;
 }
 
 .client-installment-copy strong {
   display: block;
   font-size: 0.94rem;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .client-status-badge {
@@ -1018,6 +1070,8 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .client-installment-paid-row {
@@ -1036,11 +1090,18 @@
   flex: 1;
   font-size: 0.84rem;
   font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .client-installment-paid-row strong {
   color: var(--client-ink-3);
   font-size: 0.84rem;
+  flex-shrink: 0;
+}
+
+.client-installment-paid-label {
+  margin: 14px 0 10px;
 }
 
 .client-conta-profile {
@@ -1301,10 +1362,25 @@
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+  text-align: center;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .client-order-proof-upload input {
   display: none;
+}
+
+.client-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.client-order-action-button {
+  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .client-pay-amount-card {
@@ -1410,6 +1486,7 @@
 
 .client-confirm-intro {
   display: flex;
+  align-items: flex-start;
   gap: 10px;
   margin-bottom: 12px;
   padding: 14px;
@@ -1423,20 +1500,27 @@
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .client-confirm-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 9px;
   padding: 11px;
 }
 
+.client-confirm-item > div {
+  min-width: 0;
+}
+
 .client-confirm-item strong {
   display: block;
   font-size: 0.84rem;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .client-confirm-item span {
@@ -1445,12 +1529,16 @@
   color: var(--client-ink-3);
   font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-confirm-total {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px 12px;
   margin: 4px 0;
   padding: 15px;
 }
@@ -1459,6 +1547,8 @@
   color: var(--client-ink-3);
   font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .client-confirm-total strong {
@@ -1468,7 +1558,7 @@
 
 .client-confirm-installment {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 8px;
   padding: 11px 14px;
@@ -1492,11 +1582,17 @@
 .client-confirm-installment > div {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   color: var(--client-ink-2);
   font-size: 0.84rem;
   font-weight: 700;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.client-confirm-installment strong {
+  flex-shrink: 0;
 }
 
 .client-confirm-support {

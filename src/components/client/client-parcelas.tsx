@@ -113,7 +113,7 @@ export function ClientParcelas({
 
         {paid.length ? (
           <>
-            <div className="vendor-section-label" style={{ margin: "14px 0 10px" }}>
+            <div className="vendor-section-label client-installment-paid-label">
               <span>Pagas</span>
             </div>
             {paid.map((installment) => (

@@ -16,6 +16,7 @@ export function VendorSaleRow({ sale }: { sale: SaleWithRelations }) {
   const status = getSaleStatus(sale.installments);
   const itemCount = sale.items.reduce((total, item) => total + item.quantity, 0);
   const installment = sale.payment_mode === "installment";
+  const fromVendor = Boolean(sale.created_by);
   const customerName = sale.customer?.full_name ?? "Cliente";
   const avatarColor = sale.customer?.avatar_color ?? "#11885b";
 
@@ -42,6 +43,16 @@ export function VendorSaleRow({ sale }: { sale: SaleWithRelations }) {
             <strong>{formatBRL(sale.total_amount)}</strong>
             <VendorSaleBadge small status={status} />
           </div>
+        </div>
+        <div className="vendor-sale-row-meta">
+          <span className="vendor-order-origin">
+            <VendorIcon name={fromVendor ? "store" : "box"} size={11} />
+            {fromVendor ? "Pela loja" : "Via catálogo"}
+          </span>
+          <span className="vendor-order-delivery">
+            <VendorIcon name={sale.delivery_type === "delivery" ? "truck" : "store"} size={12} />
+            {sale.delivery_type === "delivery" ? "Entrega" : "Retirada"}
+          </span>
         </div>
         {installment ? <VendorCrediarioProgress installments={sale.installments} /> : null}
       </VendorCard>

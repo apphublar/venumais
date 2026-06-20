@@ -164,11 +164,16 @@
   min-width: 0;
 }
 
+.vendor-screen-header-main > div {
+  min-width: 0;
+}
+
 .vendor-screen-header h1 {
   margin: 0;
   font-size: 1.65rem;
   line-height: 1.05;
   letter-spacing: -0.04em;
+  word-break: break-word;
 }
 
 .vendor-screen-header p {
@@ -176,6 +181,8 @@
   color: var(--vendor-ink-3);
   font-size: 0.86rem;
   font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .vendor-screen-body {
@@ -278,6 +285,8 @@ button.vendor-card {
   color: var(--vendor-ink-3);
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .vendor-customer-status {
@@ -618,6 +627,12 @@ button.vendor-card {
   }
 }
 
+@media (max-width: 420px) {
+  .vendor-order-delivery-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .vendor-chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -865,10 +880,16 @@ button.vendor-card {
 
 .vendor-sale-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
+}
+
+.vendor-sale-card-main {
+  min-width: 0;
+  flex: 1;
 }
 
 .vendor-sale-card-main strong,
@@ -884,10 +905,13 @@ button.vendor-card {
   color: var(--vendor-ink-3);
   font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .vendor-sale-card-meta {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .vendor-sale-status {
@@ -2421,7 +2445,7 @@ button.vendor-card {
 
 .vendor-sale-row-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -2449,6 +2473,8 @@ button.vendor-card {
   color: var(--vendor-ink-3);
   font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .vendor-sale-row-copy em {
@@ -2466,6 +2492,15 @@ button.vendor-card {
 
 .vendor-sale-row-side {
   text-align: right;
+  flex-shrink: 0;
+}
+
+.vendor-sale-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
 }
 
 .vendor-sale-badge {
@@ -3219,9 +3254,9 @@ button.vendor-card {
   margin-bottom: 9px;
 }
 
-.vendor-order-row-head {
+.vendor-order-row-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -3247,6 +3282,24 @@ button.vendor-card {
   color: var(--vendor-ink-3);
   font-size: 0.75rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.vendor-order-row-side {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.vendor-order-row-side strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.vendor-order-row-side .vendor-order-status {
+  margin-top: 4px;
+  display: inline-flex;
 }
 
 .vendor-order-status {
@@ -3255,6 +3308,8 @@ button.vendor-card {
   font-size: 0.68rem;
   font-weight: 800;
   white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .vendor-order-status-new {
@@ -3293,8 +3348,8 @@ button.vendor-card {
 .vendor-order-origin {
   padding: 2px 7px;
   border-radius: 999px;
-  background: #dbeafe;
-  color: #1e478f;
+  background: #e7f6ef;
+  color: #0e6e4a;
   font-weight: 800;
 }
 
@@ -3317,7 +3372,7 @@ button.vendor-card {
 }
 
 .vendor-order-detail {
-  padding: 6px 16px 96px;
+  padding: 6px 16px 132px;
 }
 
 .vendor-order-detail-tags {
@@ -3334,6 +3389,10 @@ button.vendor-card {
   margin-bottom: 12px;
 }
 
+.vendor-order-detail-customer > div {
+  min-width: 0;
+}
+
 .vendor-order-detail-customer strong,
 .vendor-order-detail-customer span {
   display: block;
@@ -3344,6 +3403,8 @@ button.vendor-card {
   color: var(--vendor-ink-3);
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .vendor-order-detail-address,
@@ -3493,14 +3554,24 @@ button.vendor-card {
 
 .vendor-order-detail-footer {
   position: fixed;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 0;
-  transform: translateX(-50%);
+  transform: none;
   width: min(480px, 100%);
-  padding: 16px;
+  margin: 0 auto;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--vendor-line);
   background: var(--vendor-card);
   z-index: 12;
+  box-sizing: border-box;
+}
+
+.vendor-order-detail-footer > .vendor-button,
+.vendor-order-detail-footer > .vendor-button:link,
+.vendor-order-detail-footer > .vendor-button:visited {
+  width: 100%;
+  justify-content: center;
 }
 
 .vendor-order-delivery-box {
@@ -3527,6 +3598,10 @@ button.vendor-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.vendor-order-delivery-actions .vendor-button {
+  width: 100%;
 }
 
 .vendor-icon-button-whats {
@@ -5550,6 +5625,17 @@ button.vendor-card {
   .vendor-app.vendor-app-desktop .vendor-order-status {
     padding: 5px 10px;
     font-size: 0.7rem;
+  }
+
+  .vendor-app.vendor-app-desktop .vendor-order-detail-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 
   .vendor-app.vendor-app-desktop .vendor-order-row-meta {

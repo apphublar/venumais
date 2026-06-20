@@ -65,6 +65,7 @@ export function OrderDetailView({
   const needsPricing = order.items.some((item) => item.unit_price === null);
   const isQuote = order.status === "quoted" || order.status === "quote" || order.order_type === "quote";
   const isWholesale = order.order_type === "wholesale";
+  const fromVendor = order.source === "vendor" || order.source === "seller";
   const address = formatCustomerAddress(order.customer);
   const awaitingPayment = order.status === "awaiting_payment";
   const paymentReview = order.status === "payment_review";
@@ -162,7 +163,8 @@ export function OrderDetailView({
       <section className="vendor-order-detail">
         <div className="vendor-order-detail-tags">
           <span className="vendor-order-origin">
-            <VendorIcon name="user" size={11} /> Pelo cliente
+            <VendorIcon name={fromVendor ? "store" : "box"} size={11} />
+            {fromVendor ? "Pela loja" : "Via catálogo"}
           </span>
           <span className="vendor-order-delivery">
             <VendorIcon name={order.delivery_type === "delivery" ? "truck" : "store"} size={12} />
@@ -384,7 +386,7 @@ export function OrderDetailView({
       <div className="vendor-order-detail-footer">
         {needsPricing || isQuote ? (
           <button
-            className="vendor-button vendor-button-primary"
+            className="vendor-button vendor-button-primary vendor-button-full"
             disabled={pending || !complete}
             onClick={approve}
             type="button"
@@ -394,7 +396,7 @@ export function OrderDetailView({
           </button>
         ) : paymentReview ? (
           <button
-            className="vendor-button vendor-button-primary"
+            className="vendor-button vendor-button-primary vendor-button-full"
             disabled={pending}
             onClick={confirmPayment}
             type="button"
@@ -412,16 +414,16 @@ export function OrderDetailView({
             </button>
           </div>
         ) : awaitingPayment ? (
-          <button className="vendor-button vendor-button-ghost" disabled type="button">
+          <button className="vendor-button vendor-button-ghost vendor-button-full" disabled type="button">
             Aguardando envio do comprovante
           </button>
         ) : order.status === "new" ? (
-          <button className="vendor-button vendor-button-ghost" disabled type="button">
+          <button className="vendor-button vendor-button-ghost vendor-button-full" disabled type="button">
             Aguardando cliente finalizar pedido
           </button>
         ) : (
           <Link
-            className="vendor-button vendor-button-primary"
+            className="vendor-button vendor-button-primary vendor-button-full"
             href={`/painel/vendas/nova?cliente=${order.customer.id}`}
           >
             <VendorIcon name="plus" size={18} />

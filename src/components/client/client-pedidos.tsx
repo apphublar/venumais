@@ -335,19 +335,11 @@ export function ClientPedidos({
                       </span>
                     </div>
                   ) : null}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      marginTop: 10,
-                      flexWrap: "wrap"
-                    }}
-                  >
+                  <div className="client-order-actions">
                     <button
-                      className="vendor-button vendor-button-ghost"
+                      className="vendor-button vendor-button-ghost client-order-action-button"
                       disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
                       onClick={() => handleOpenQuoteEditor(order.id)}
-                      style={{ flex: 1 }}
                       type="button"
                     >
                       <VendorIcon name="edit" size={15} />
@@ -355,9 +347,8 @@ export function ClientPedidos({
                     </button>
                     {order.total_amount !== null && (order.status === "new" || order.status === "quote" || order.status === "quoted") ? (
                       <button
-                        className="vendor-button vendor-button-primary"
+                        className="vendor-button vendor-button-primary client-order-action-button"
                         onClick={() => setCheckoutOrder(order)}
-                        style={{ flex: 1 }}
                         type="button"
                       >
                         <VendorIcon name="check" size={15} />
@@ -376,10 +367,9 @@ export function ClientPedidos({
                           {paymentProofFile ? paymentProofFile.name : "Anexar comprovante"}
                         </label>
                         <button
-                          className="vendor-button vendor-button-primary"
+                          className="vendor-button vendor-button-primary client-order-action-button"
                           disabled={isPendingAction}
                           onClick={() => handleReportOrderPayment(order)}
-                          style={{ flex: 1 }}
                           type="button"
                         >
                           <VendorIcon name="check" size={15} />
@@ -388,10 +378,9 @@ export function ClientPedidos({
                       </>
                     ) : null}
                     <button
-                      className="vendor-button vendor-button-danger"
+                      className="vendor-button vendor-button-danger client-order-action-button"
                       disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
                       onClick={() => handleCancelQuote(order.id)}
-                      style={{ flex: 1 }}
                       type="button"
                     >
                       <VendorIcon name="x" size={15} />
