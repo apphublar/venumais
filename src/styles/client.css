@@ -592,6 +592,135 @@
   color: var(--client-ink-1);
 }
 
+/* ── Checkout passo 2: seletor de método de pagamento ────────────────────── */
+.client-cart-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--client-ink-3);
+  margin: 0 0 10px;
+}
+
+.client-cart-pgto-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.client-cart-pgto-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border: 1.5px solid var(--client-line);
+  border-radius: 12px;
+  background: var(--client-bg-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--client-ink-2);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.client-cart-pgto-btn.is-active {
+  background: #f0fdf4;
+}
+
+/* PIX key box */
+.client-cart-pix-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.client-cart-pix-header strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--client-ink-1);
+}
+
+.client-cart-pix-header span {
+  font-size: 0.75rem;
+  color: var(--client-ink-3);
+}
+
+.client-cart-pix-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--client-bg-1);
+  border: 1px solid var(--client-line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.client-cart-pix-copy code {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--client-ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 65%;
+}
+
+.client-cart-pix-copy span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--green-600);
+  white-space: nowrap;
+}
+
+.client-cart-pix-hint {
+  font-size: 0.75rem;
+  color: var(--client-ink-3);
+  margin: 8px 0 4px;
+  line-height: 1.4;
+}
+
+/* Dinheiro / Cartão detalhe */
+.client-cart-pgto-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border-radius: 14px;
+  background: var(--client-bg-2);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.client-cart-pgto-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.client-cart-pgto-detail strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--client-ink-1);
+}
+
+.client-cart-pgto-detail span {
+  font-size: 0.78rem;
+  color: var(--client-ink-3);
+  line-height: 1.45;
+  max-width: 260px;
+}
+
 .client-auth-error {
   margin: 0 0 10px;
   color: #dc2626;
@@ -1668,6 +1797,151 @@
     opacity: 1;
     transform: translate(-50%, 0);
   }
+}
+
+/* ── ClientCatalogOrderDetail ─────────────────────────────────────────────── */
+.client-catalog-state-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  margin-bottom: 4px;
+}
+
+.client-catalog-state-text {
+  font-size: 13px;
+  color: var(--client-ink-2);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.client-catalog-state-text strong {
+  font-weight: 800;
+  color: var(--client-ink-1);
+}
+
+.client-catalog-link-btn {
+  background: none;
+  border: none;
+  color: var(--client-ink-3);
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 6px;
+  text-align: center;
+  width: 100%;
+}
+
+.client-catalog-link-btn:hover {
+  color: var(--client-ink-2);
+}
+
+/* ── Cartões de pedido do catálogo na lista ─────────────────────────────────── */
+.client-cat-order-card {
+  border: 1.5px solid var(--client-line);
+  border-radius: 16px;
+  background: var(--client-card);
+  overflow: hidden;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.client-cat-order-card.needs-action {
+  border-color: var(--green-600);
+  background: var(--green-50);
+}
+
+.client-cat-order-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px 10px;
+}
+
+.client-cat-order-card-head .order-code {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--client-ink-1);
+}
+
+.client-cat-order-card-head .order-date {
+  font-size: 0.73rem;
+  color: var(--client-ink-3);
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.client-cat-order-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 13px;
+  border-top: 1px solid var(--client-line);
+  gap: 8px;
+}
+
+.client-cat-order-card.needs-action .client-cat-order-card-foot {
+  border-top-color: var(--green-600);
+  opacity: 0.85;
+}
+
+.client-cat-order-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--client-ink-3);
+  font-weight: 600;
+}
+
+.client-cat-order-action-hint {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: var(--green-700);
+  padding: 6px 14px 10px;
+}
+
+/* ── OrcamentoCard (âmbar) ──────────────────────────────────────────────────── */
+.client-orcamento-card {
+  border: 1.5px solid #fde9c8;
+  border-radius: 16px;
+  background: #fffaf0;
+  overflow: hidden;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.client-orcamento-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px 10px;
+}
+
+.client-orcamento-card-head .order-code {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--client-ink-1);
+}
+
+.client-orcamento-card-head .order-date {
+  font-size: 0.73rem;
+  color: #b45309;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.client-orcamento-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 13px;
+  border-top: 1px solid #fde9c8;
+  gap: 8px;
 }
 
 @keyframes clientPop {

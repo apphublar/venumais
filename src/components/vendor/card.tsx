@@ -1,11 +1,15 @@
+import type { CSSProperties, ReactNode } from "react";
+
 export function VendorCard({
   children,
   className = "",
-  onClick
+  onClick,
+  style
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   onClick?: () => void;
+  style?: CSSProperties;
 }) {
   const Tag = onClick ? "button" : "div";
 
@@ -13,6 +17,7 @@ export function VendorCard({
     <Tag
       className={`vendor-card ${className}`.trim()}
       onClick={onClick}
+      style={style}
       type={onClick ? "button" : undefined}
     >
       {children}

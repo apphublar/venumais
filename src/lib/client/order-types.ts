@@ -22,6 +22,7 @@ export type StoreOrderDetail = {
   vendor_payment_message?: string | null;
   payment_proof_url?: string | null;
   payment_proof_name?: string | null;
+  payment_informed?: boolean | null;
   quote_sent_at?: string | null;
   customer_confirmed_at?: string | null;
   payment_reported_at?: string | null;

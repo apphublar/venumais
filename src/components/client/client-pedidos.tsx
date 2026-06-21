@@ -4,19 +4,18 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ClientOverlay } from "@/components/client/client-overlay";
 import { ClientScreenHeader } from "@/components/client/client-screen-header";
+import { ClientCatalogOrderDetail } from "@/components/client/client-catalog-order-detail";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSectionLabel } from "@/components/vendor/section-label";
 import {
   cancelClientOrderAction,
-  finalizeClientOrderWithPaymentAction,
   getCustomerOrderDetailAction,
-  notifyOrderPaymentAction,
-  reportOrderPaymentAction,
   updateClientOrderAction
 } from "@/lib/client/actions";
 import { formatBRL } from "@/lib/products/format";
 import { formatSaleCode } from "@/lib/sales/format";
+import { getOrderStatusMeta, isQuoteAnswered, orderNeedsClientAction } from "@/lib/client/order-status";
 import type {
   PortalOrder,
   PortalOrderDetail,
@@ -27,34 +26,12 @@ import type {
 
 type OrderFilter = "todos" | "orcamento" | "aberto" | "quitado";
 
-function formatLongDate(value: string) {
+function formatShortDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR", {
     day: "2-digit",
-    month: "long",
+    month: "short",
     year: "numeric"
   });
-}
-
-type OrderPaymentMethod = "pix" | "cash" | "card";
-
-function orderStatusMeta(status: string) {
-  switch (status) {
-    case "quote":
-    case "quoted":
-      return { label: "Orçamento enviado", tone: "open" as const };
-    case "awaiting_payment":
-      return { label: "Aguardando pagamento", tone: "warn" as const };
-    case "payment_review":
-      return { label: "Comprovante enviado", tone: "open" as const };
-    case "paid":
-      return { label: "Pago", tone: "paid" as const };
-    case "delivering":
-      return { label: "Em entrega", tone: "open" as const };
-    case "delivered":
-      return { label: "Entregue", tone: "paid" as const };
-    default:
-      return { label: "Novo pedido", tone: "warn" as const };
-  }
 }
 
 export function ClientPedidos({
@@ -63,8 +40,7 @@ export function ClientPedidos({
   onToast,
   orders,
   products,
-  sales
-  ,
+  sales,
   store
 }: {
   onConfirmSale: (saleId: string) => void;
@@ -77,53 +53,45 @@ export function ClientPedidos({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<OrderFilter>("todos");
+  const [selectedOrder, setSelectedOrder] = useState<PortalOrder | null>(null);
   const [editingOrder, setEditingOrder] = useState<PortalOrderDetail | null>(null);
-  const [checkoutOrder, setCheckoutOrder] = useState<PortalOrder | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<OrderPaymentMethod>("pix");
-  const [paymentNote, setPaymentNote] = useState("");
-  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
-  const [checkoutProofFile, setCheckoutProofFile] = useState<File | null>(null);
-  const [copiedPix, setCopiedPix] = useState(false);
   const [isLoadingOrder, startLoadingOrder] = useTransition();
   const [isPendingAction, startPendingAction] = useTransition();
 
   const pendingConfirmation = useMemo(
-    () =>
-      sales.filter(
-        (sale) => sale.payment_mode === "installment" && sale.confirmation_status === "pending"
-      ),
+    () => sales.filter((s) => s.payment_mode === "installment" && s.confirmation_status === "pending"),
     [sales]
   );
-
   const openSales = useMemo(
     () =>
       sales.filter(
-        (sale) =>
-          !(
-            sale.payment_mode === "installment" && sale.confirmation_status === "pending"
-          ) && sale.open_amount > 0.001
+        (s) => !(s.payment_mode === "installment" && s.confirmation_status === "pending") && s.open_amount > 0.001
       ),
     [sales]
   );
+  const paidSales = useMemo(() => sales.filter((s) => s.open_amount <= 0.001), [sales]);
 
-  const paidSales = useMemo(
-    () => sales.filter((sale) => sale.open_amount <= 0.001),
-    [sales]
+  // ── Categorias de pedidos ───────────────────────────────────────────────────
+  const quoteOrders = orders.filter((o) =>
+    ["quote", "new"].includes(o.status)
+  );
+  const quoteAnsweredOrders = orders.filter((o) =>
+    ["quote_answered", "quoted"].includes(o.status)
+  );
+  const awaitingOrders = orders.filter((o) =>
+    ["awaiting_payment", "awaiting_card", "cash_on_delivery", "payment_review"].includes(o.status)
+  );
+  const confirmedOrders = orders.filter((o) =>
+    ["paid", "delivering", "delivered"].includes(o.status)
   );
 
-  const quoteOrders = orders.filter(
-    (o) => o.status === "new" || o.status === "quote" || o.status === "quoted"
-  );
-  const awaitingOrders = orders.filter((o) => o.status === "awaiting_payment");
-  const reviewOrders = orders.filter((o) => o.status === "payment_review");
-  const confirmedOrders = orders.filter(
-    (o) => o.status === "paid" || o.status === "delivering" || o.status === "delivered"
-  );
+  const allOrcamento = [...quoteOrders, ...quoteAnsweredOrders];
 
   const counts = {
     todos: orders.length + sales.length,
-    orcamento: quoteOrders.length,
-    aberto: openSales.length + pendingConfirmation.length + awaitingOrders.length + reviewOrders.length,
+    orcamento: allOrcamento.length,
+    aberto:
+      openSales.length + pendingConfirmation.length + awaitingOrders.length,
     quitado: paidSales.length + confirmedOrders.length
   };
 
@@ -135,44 +103,33 @@ export function ClientPedidos({
   ];
 
   const show = (key: OrderFilter) => filter === "todos" || filter === key;
+  const empty = (msg: string) => <div className="client-empty-inline">{msg}</div>;
 
-  const empty = (message: string) => (
-    <div className="client-empty-inline">{message}</div>
-  );
+  const handleOpenDetail = (order: PortalOrder) => setSelectedOrder(order);
 
-  const handleOpenQuoteEditor = (orderId: string) => {
+  const handleOpenEditor = (orderId: string) => {
     startLoadingOrder(async () => {
       const result = await getCustomerOrderDetailAction(store.id, orderId);
       if (result.error || !result.order) {
-        onToast(result.error ?? "Não foi possível abrir o orçamento.");
+        onToast(result.error ?? "Não foi possível abrir o pedido.");
         return;
       }
       setEditingOrder(result.order);
     });
   };
 
-  const handleCancelQuote = (orderId: string) => {
-    if (!window.confirm("Cancelar este orçamento? Essa ação não pode ser desfeita.")) {
-      return;
-    }
-
+  const handleCancelOrder = (orderId: string) => {
+    if (!window.confirm("Cancelar este pedido? Essa ação não pode ser desfeita.")) return;
     startPendingAction(async () => {
-      const result = await cancelClientOrderAction({
-        storeId: store.id,
-        storeSlug: store.slug,
-        orderId
-      });
-      if (result.error) {
-        onToast(result.error);
-        return;
-      }
-      onToast("Orçamento cancelado.");
+      const result = await cancelClientOrderAction({ storeId: store.id, storeSlug: store.slug, orderId });
+      if (result.error) { onToast(result.error); return; }
+      onToast("Pedido cancelado.");
       setEditingOrder(null);
       router.refresh();
     });
   };
 
-  const handleSaveQuote = (input: {
+  const handleSaveOrder = (input: {
     orderId: string;
     deliveryType: "pickup" | "delivery";
     notes: string;
@@ -182,253 +139,183 @@ export function ClientPedidos({
       const result = await updateClientOrderAction({
         storeId: store.id,
         storeSlug: store.slug,
-        orderId: input.orderId,
-        deliveryType: input.deliveryType,
-        notes: input.notes,
-        items: input.items
+        ...input
       });
-      if (result.error) {
-        onToast(result.error);
-        return;
-      }
-      onToast("Orçamento atualizado.");
+      if (result.error) { onToast(result.error); return; }
+      onToast("Pedido atualizado.");
       setEditingOrder(null);
       router.refresh();
     });
   };
 
-  const hasPix = Boolean(store.pix_key?.trim());
-  const pixName = store.pix_receiver_name ?? store.name;
-  const pixCode = hasPix
-    ? `00020126580014BR.GOV.BCB.PIX0136${store.pix_key!.trim()}5204000053039865802BR5921${pixName}6304A1B2`
-    : "";
-
-  const copyPix = async () => {
-    if (!hasPix) {
-      onToast("A loja ainda não configurou chave PIX.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(pixCode);
-      setCopiedPix(true);
-      onToast("Código PIX copiado!");
-      window.setTimeout(() => setCopiedPix(false), 1800);
-    } catch {
-      onToast("Não foi possível copiar o PIX.");
-    }
-  };
-
-  const handleFinalizeOrder = () => {
-    if (!checkoutOrder) return;
-    startPendingAction(async () => {
-      const formData = new FormData();
-      formData.set("storeId", store.id);
-      formData.set("storeSlug", store.slug);
-      formData.set("orderId", checkoutOrder.id);
-      formData.set("paymentMethod", paymentMethod);
-      formData.set("paymentNote", paymentNote);
-      if (paymentMethod === "pix" && checkoutProofFile) {
-        formData.set("receipt", checkoutProofFile);
-      }
-      const result = await finalizeClientOrderWithPaymentAction(formData);
-      if (result.error) {
-        onToast(result.error);
-        return;
-      }
-      onToast("Pedido enviado para confirmação da loja.");
-      setCheckoutOrder(null);
-      setPaymentNote("");
-      setPaymentMethod("pix");
-      setCheckoutProofFile(null);
-      setCopiedPix(false);
-      router.refresh();
-    });
-  };
-
-  const handleReportOrderPayment = (order: PortalOrder) => {
-    if (!paymentProofFile) {
-      onToast("Anexe o comprovante para enviar.");
-      return;
-    }
-    startPendingAction(async () => {
-      const formData = new FormData();
-      formData.set("storeId", store.id);
-      formData.set("storeSlug", store.slug);
-      formData.set("orderId", order.id);
-      formData.set("receipt", paymentProofFile);
-      const result = await reportOrderPaymentAction(formData);
-      if (result.error) {
-        onToast(result.error);
-        return;
-      }
-      setPaymentProofFile(null);
-      onToast("Comprovante enviado para análise da loja.");
-      router.refresh();
-    });
-  };
-
-  const handleNotifyOrderPayment = (orderId: string) => {
-    startPendingAction(async () => {
-      const result = await notifyOrderPaymentAction({
-        storeId: store.id,
-        storeSlug: store.slug,
-        orderId
-      });
-      if (result.error) {
-        onToast(result.error);
-        return;
-      }
-      onToast("Pagamento informado para a loja.");
-      router.refresh();
-    });
-  };
-
-  const renderOrderCard = (order: PortalOrder) => (
-    <VendorCard className="client-quote-card" key={order.id}>
-      <div className="client-sale-card-head">
-        <div>
-          <strong>Pedido #{order.order_code}</strong>
-          <span>
-            {formatLongDate(order.created_at)} · {order.item_count}{" "}
-            {order.item_count === 1 ? "item" : "itens"}
-            {order.edited_at ? " · editado" : ""}
-          </span>
-        </div>
-        {(() => {
-          const meta = orderStatusMeta(order.status);
-          return (
-            <span className={`client-badge client-badge-${meta.tone}`}>{meta.label}</span>
-          );
-        })()}
-      </div>
-      {order.total_amount !== null ? (
-        <div className="client-sale-card-foot">
-          <div>
-            <span>Total</span>
-            <strong>{formatBRL(order.total_amount)}</strong>
+  // ── OrcamentoCard (âmbar) — pedido sem preço, aguardando loja ────────────────
+  const renderOrcamentoCard = (order: PortalOrder) => {
+    const needsAction = isQuoteAnswered(order.status);
+    return (
+      <div
+        className={`client-cat-order-card${needsAction ? " needs-action" : ""}`}
+        key={order.id}
+        onClick={() => handleOpenDetail(order)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(order)}
+      >
+        <div className={needsAction ? "client-cat-order-card-head" : "client-orcamento-card-head"}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="order-code">Pedido #{order.order_code}</div>
+            <div className="order-date">
+              {formatShortDate(order.created_at)} · {order.item_count}{" "}
+              {order.item_count === 1 ? "item" : "itens"}
+            </div>
           </div>
-          <div>
-            <span>Tipo</span>
-            <strong>{order.delivery_type === "delivery" ? "Entrega" : "Retirada"}</strong>
+          {(() => {
+            const m = getOrderStatusMeta(order.status);
+            return (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: m.bg,
+                  color: m.fg,
+                  borderRadius: 999,
+                  padding: "3px 9px",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0
+                }}
+              >
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: m.dot }} />
+                {m.label}
+              </span>
+            );
+          })()}
+        </div>
+
+        {needsAction ? (
+          <div className="client-cat-order-action-hint">
+            <VendorIcon name="receipt" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            A loja enviou os valores — toque para fechar o pedido
           </div>
-        </div>
-      ) : (
-        <div className="client-quote-note">
-          <VendorIcon name="clock" size={15} />
-          <span>Aguardando valores da loja</span>
-        </div>
-      )}
-      {order.status === "awaiting_payment" && order.customer_payment_method === "card" ? (
-        <div className="client-quote-note">
-          <VendorIcon name="wallet" size={15} />
-          <span>
-            {order.vendor_payment_link ? (
-              <a href={order.vendor_payment_link} rel="noopener noreferrer" target="_blank">
-                Abrir link de pagamento
-              </a>
-            ) : (
-              "Aguardando a loja enviar o link de pagamento"
-            )}
-          </span>
-        </div>
-      ) : null}
-      {order.status === "delivering" ? (
-        <div className="client-quote-note">
-          <VendorIcon name="truck" size={15} />
-          <span>
-            {order.tracking_url ? (
-              <a href={order.tracking_url} rel="noopener noreferrer" target="_blank">
-                Rastrear entrega {order.tracking_code ? `(${order.tracking_code})` : ""}
-              </a>
-            ) : (
-              "Seu pedido está a caminho!"
-            )}
-          </span>
-        </div>
-      ) : null}
-      {order.status === "delivered" ? (
-        <div className="client-quote-note">
-          <VendorIcon name="check" size={15} />
-          <span>Pedido entregue! ✓</span>
-        </div>
-      ) : null}
-      {order.status === "paid" ? (
-        <div className="client-quote-note">
-          <VendorIcon name="check" size={15} />
-          <span>Pagamento confirmado pela loja.</span>
-        </div>
-      ) : null}
-      <div className="client-order-actions">
-        <button
-          className="vendor-button vendor-button-ghost client-order-action-button"
-          disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
-          onClick={() => handleOpenQuoteEditor(order.id)}
-          type="button"
-        >
-          <VendorIcon name="edit" size={15} />
-          Editar
-        </button>
-        {order.total_amount !== null && (order.status === "new" || order.status === "quote" || order.status === "quoted") ? (
-          <button
-            className="vendor-button vendor-button-primary client-order-action-button"
-            onClick={() => setCheckoutOrder(order)}
-            type="button"
-          >
-            <VendorIcon name="check" size={15} />
-            Finalizar pedido
-          </button>
         ) : null}
-        {order.status === "awaiting_payment" && order.customer_payment_method === "pix" ? (
-          <>
-            <label className="client-order-proof-upload">
-              <input
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onChange={(event) => setPaymentProofFile(event.target.files?.[0] ?? null)}
-                type="file"
-              />
-              <VendorIcon name="share" size={14} />
-              {paymentProofFile ? paymentProofFile.name : "Anexar comprovante"}
-            </label>
+
+        {!needsAction ? (
+          <div
+            className="client-orcamento-card-foot"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              className="vendor-button vendor-button-primary client-order-action-button"
-              disabled={isPendingAction}
-              onClick={() => handleReportOrderPayment(order)}
+              className="vendor-button vendor-button-ghost"
+              disabled={isLoadingOrder || isPendingAction}
+              onClick={(e) => { e.stopPropagation(); handleOpenEditor(order.id); }}
+              style={{ fontSize: "0.78rem", padding: "6px 12px" }}
               type="button"
             >
-              <VendorIcon name="check" size={15} />
-              Enviar comprovante
+              <VendorIcon name="edit" size={14} />
+              Editar
             </button>
-          </>
+            <button
+              className="vendor-button vendor-button-danger"
+              disabled={isPendingAction}
+              onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id); }}
+              style={{ fontSize: "0.78rem", padding: "6px 12px" }}
+              type="button"
+            >
+              <VendorIcon name="x" size={14} />
+              Excluir
+            </button>
+          </div>
         ) : null}
-        {order.status === "awaiting_payment" &&
-        order.customer_payment_method !== "pix" ? (
-          <button
-            className="vendor-button vendor-button-primary client-order-action-button"
-            disabled={isPendingAction}
-            onClick={() => handleNotifyOrderPayment(order.id)}
-            type="button"
-          >
-            <VendorIcon name="check" size={15} />
-            Avisar pagamento
-          </button>
-        ) : null}
-        <button
-          className="vendor-button vendor-button-danger client-order-action-button"
-          disabled={isPendingAction || !(order.status === "new" || order.status === "quote" || order.status === "quoted")}
-          onClick={() => handleCancelQuote(order.id)}
-          type="button"
-        >
-          <VendorIcon name="x" size={15} />
-          Excluir
-        </button>
       </div>
-    </VendorCard>
-  );
+    );
+  };
+
+  // ── PedidoCatCard — pedido finalizado com pagamento ──────────────────────────
+  const renderCatOrderCard = (order: PortalOrder) => {
+    const needsAction = orderNeedsClientAction(order.status, order.payment_informed);
+    const payMethod = order.customer_payment_method;
+    const m = getOrderStatusMeta(order.status);
+
+    return (
+      <div
+        className={`client-cat-order-card${needsAction ? " needs-action" : ""}`}
+        key={order.id}
+        onClick={() => handleOpenDetail(order)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(order)}
+      >
+        <div className="client-cat-order-card-head">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="order-code">Pedido #{order.order_code}</div>
+            <div className="order-date">
+              {formatShortDate(order.created_at)} · {order.item_count}{" "}
+              {order.item_count === 1 ? "item" : "itens"}
+            </div>
+          </div>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: m.bg,
+              color: m.fg,
+              borderRadius: 999,
+              padding: "3px 9px",
+              fontSize: 11,
+              fontWeight: 800,
+              whiteSpace: "nowrap",
+              flexShrink: 0
+            }}
+          >
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: m.dot }} />
+            {m.label}
+          </span>
+        </div>
+
+        {needsAction && order.status === "awaiting_payment" && payMethod === "pix" ? (
+          <div className="client-cat-order-action-hint">
+            <VendorIcon name="pix" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            Pague via PIX e toque aqui para informar
+          </div>
+        ) : needsAction && order.status === "awaiting_card" ? (
+          <div className="client-cat-order-action-hint">
+            <VendorIcon name="cards" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            Link de pagamento disponível — toque para pagar
+          </div>
+        ) : null}
+
+        <div className="client-cat-order-card-foot">
+          <div className="client-cat-order-card-meta">
+            {payMethod ? (
+              <>
+                <VendorIcon
+                  name={payMethod === "pix" ? "pix" : payMethod === "card" ? "cards" : "wallet"}
+                  size={14}
+                />
+                {payMethod === "pix" ? "PIX" : payMethod === "card" ? "Cartão" : "Dinheiro"}
+              </>
+            ) : null}
+            {payMethod ? <span>·</span> : null}
+            <VendorIcon name={order.delivery_type === "delivery" ? "truck" : "store"} size={14} />
+            {order.delivery_type === "delivery" ? "Entrega" : "Retirada"}
+          </div>
+          {order.total_amount != null ? (
+            <strong style={{ fontSize: "0.9rem", color: "var(--client-ink-1)" }}>
+              {formatBRL(order.total_amount)}
+            </strong>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="client-main">
       <ClientScreenHeader big subtitle="Compras e orçamentos" title="Meus pedidos" />
       <div className="client-screen-body">
+        {/* ── Filtros ── */}
         <div className="client-filter-chips">
           {tabs.map(([key, label]) => (
             <button
@@ -442,23 +329,16 @@ export function ClientPedidos({
           ))}
         </div>
 
-        {(filter === "todos" || filter === "aberto") && pendingConfirmation.length > 0 ? (
+        {/* ── Aguardando confirmação (vendas parceladas) ── */}
+        {show("aberto") && pendingConfirmation.length > 0 ? (
           <>
             <VendorSectionLabel>Aguardando sua confirmação</VendorSectionLabel>
             {pendingConfirmation.map((sale) => (
-              <VendorCard
-                className="client-confirm-banner"
-                key={sale.id}
-                onClick={() => onConfirmSale(sale.id)}
-              >
-                <span className="client-confirm-banner-icon">
-                  <VendorIcon name="receipt" size={21} />
-                </span>
+              <VendorCard className="client-confirm-banner" key={sale.id} onClick={() => onConfirmSale(sale.id)}>
+                <span className="client-confirm-banner-icon"><VendorIcon name="receipt" size={21} /></span>
                 <div>
                   <strong>Confirme sua compra</strong>
-                  <span>
-                    Pedido #{formatSaleCode(sale.sale_code)} · {formatBRL(sale.total_amount)}
-                  </span>
+                  <span>Pedido #{formatSaleCode(sale.sale_code)} · {formatBRL(sale.total_amount)}</span>
                 </div>
                 <VendorIcon name="chevR" size={20} />
               </VendorCard>
@@ -466,42 +346,35 @@ export function ClientPedidos({
           </>
         ) : null}
 
-        {/* Orçamentos e novos pedidos via catálogo */}
-        {(filter === "todos" || filter === "orcamento") ? (
+        {/* ── Orçamentos respondidos (destaque verde) ── */}
+        {show("orcamento") && quoteAnsweredOrders.length > 0 ? (
           <>
-            <VendorSectionLabel>Orçamentos e novos pedidos</VendorSectionLabel>
+            <VendorSectionLabel>Orçamentos recebidos</VendorSectionLabel>
+            {quoteAnsweredOrders.map(renderOrcamentoCard)}
+          </>
+        ) : null}
+
+        {/* ── Orçamentos pendentes (âmbar) ── */}
+        {show("orcamento") ? (
+          <>
+            <VendorSectionLabel>Orçamentos enviados</VendorSectionLabel>
             {quoteOrders.length ? (
-              quoteOrders.map((order) => renderOrderCard(order))
-            ) : filter === "orcamento" ? (
+              quoteOrders.map(renderOrcamentoCard)
+            ) : filter === "orcamento" && !quoteAnsweredOrders.length ? (
               empty("Nenhum orçamento pendente.")
             ) : null}
           </>
         ) : null}
 
-        {/* Pedidos aguardando pagamento */}
-        {(filter === "todos" || filter === "aberto") && awaitingOrders.length > 0 ? (
+        {/* ── Pedidos em andamento (pagamentos) ── */}
+        {show("aberto") && awaitingOrders.length > 0 ? (
           <>
-            <VendorSectionLabel>Aguardando pagamento</VendorSectionLabel>
-            {awaitingOrders.map((order) => renderOrderCard(order))}
+            <VendorSectionLabel>Em andamento</VendorSectionLabel>
+            {awaitingOrders.map(renderCatOrderCard)}
           </>
         ) : null}
 
-        {/* Comprovante enviado – em análise */}
-        {(filter === "todos" || filter === "aberto") && reviewOrders.length > 0 ? (
-          <>
-            <VendorSectionLabel>Comprovante em análise</VendorSectionLabel>
-            {reviewOrders.map((order) => renderOrderCard(order))}
-          </>
-        ) : null}
-
-        {/* Pedidos confirmados / entregues */}
-        {(filter === "todos" || filter === "quitado") && confirmedOrders.length > 0 ? (
-          <>
-            <VendorSectionLabel>Pedidos confirmados</VendorSectionLabel>
-            {confirmedOrders.map((order) => renderOrderCard(order))}
-          </>
-        ) : null}
-
+        {/* ── Compras da loja em aberto ── */}
         {show("aberto") ? (
           <>
             <VendorSectionLabel>Em aberto</VendorSectionLabel>
@@ -509,12 +382,21 @@ export function ClientPedidos({
               openSales.map((sale) => (
                 <SaleCard key={sale.id} onOpen={() => onOpenSale(sale.id)} sale={sale} />
               ))
-            ) : filter === "aberto" && !pendingConfirmation.length ? (
+            ) : filter === "aberto" && !pendingConfirmation.length && !awaitingOrders.length ? (
               empty("Nenhuma compra em aberto.")
             ) : null}
           </>
         ) : null}
 
+        {/* ── Confirmados ── */}
+        {show("quitado") && confirmedOrders.length > 0 ? (
+          <>
+            <VendorSectionLabel>Confirmados</VendorSectionLabel>
+            {confirmedOrders.map(renderCatOrderCard)}
+          </>
+        ) : null}
+
+        {/* ── Quitados ── */}
         {show("quitado") ? (
           <>
             <VendorSectionLabel>Quitados</VendorSectionLabel>
@@ -522,101 +404,43 @@ export function ClientPedidos({
               paidSales.map((sale) => (
                 <SaleCard key={sale.id} onOpen={() => onOpenSale(sale.id)} sale={sale} />
               ))
-            ) : (
+            ) : filter === "quitado" && !confirmedOrders.length ? (
               empty("Nenhuma compra quitada ainda.")
-            )}
+            ) : null}
           </>
         ) : null}
       </div>
-      {isLoadingOrder ? (
-        <div className="client-toast">Carregando orçamento…</div>
+
+      {isLoadingOrder ? <div className="client-toast">Carregando…</div> : null}
+
+      {/* ── Overlay de detalhe do pedido do catálogo ── */}
+      {selectedOrder ? (
+        <ClientCatalogOrderDetail
+          onClose={() => setSelectedOrder(null)}
+          onRefresh={() => router.refresh()}
+          order={selectedOrder}
+          store={store}
+          storeId={store.id}
+          storeSlug={store.slug}
+        />
       ) : null}
+
+      {/* ── Overlay de edição de orçamento ── */}
       {editingOrder ? (
         <QuoteEditOverlay
           isPending={isPendingAction}
-          onCancelOrder={() => handleCancelQuote(editingOrder.id)}
+          onCancelOrder={() => handleCancelOrder(editingOrder.id)}
           onClose={() => setEditingOrder(null)}
-          onSave={handleSaveQuote}
+          onSave={handleSaveOrder}
           order={editingOrder}
           products={products}
         />
-      ) : null}
-      {checkoutOrder ? (
-        <ClientOverlay>
-          <ClientScreenHeader
-            onBack={() => setCheckoutOrder(null)}
-            subtitle={`Pedido #${String(checkoutOrder.order_code).padStart(4, "0")}`}
-            title="Finalizar pedido"
-          />
-          <div className="client-screen-body">
-            <VendorSectionLabel>Forma de pagamento</VendorSectionLabel>
-            <div className="client-cart-delivery">
-              <button className={paymentMethod === "pix" ? "is-active" : ""} onClick={() => setPaymentMethod("pix")} type="button">
-                PIX
-              </button>
-              <button className={paymentMethod === "cash" ? "is-active" : ""} onClick={() => setPaymentMethod("cash")} type="button">
-                Dinheiro
-              </button>
-              <button className={paymentMethod === "card" ? "is-active" : ""} onClick={() => setPaymentMethod("card")} type="button">
-                Cartão
-              </button>
-            </div>
-            <VendorSectionLabel>Observação do pagamento</VendorSectionLabel>
-            <textarea
-              className="client-cart-notes"
-              onChange={(event) => setPaymentNote(event.target.value)}
-              placeholder="Ex.: Vou pagar na entrega / cartão no link..."
-              rows={3}
-              value={paymentNote}
-            />
-            {paymentMethod === "pix" ? (
-              <>
-                <VendorSectionLabel>Pagamento via PIX</VendorSectionLabel>
-                <button className="client-pay-pix-box" disabled={!hasPix} onClick={copyPix} type="button">
-                  <code>{hasPix ? pixCode : "A loja ainda não cadastrou chave PIX."}</code>
-                  <span>
-                    <VendorIcon name={copiedPix ? "check" : "copy"} size={16} />
-                    {hasPix ? (copiedPix ? "Copiado" : "Copiar") : "Indisponível"}
-                  </span>
-                </button>
-                <label className={`client-pay-receipt ${checkoutProofFile ? "is-attached" : ""}`}>
-                  <input
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    onChange={(event) => setCheckoutProofFile(event.target.files?.[0] ?? null)}
-                    style={{ display: "none" }}
-                    type="file"
-                  />
-                  <VendorIcon name={checkoutProofFile ? "check" : "share"} size={22} />
-                  <span>{checkoutProofFile ? checkoutProofFile.name : "Anexar comprovante PIX"}</span>
-                </label>
-              </>
-            ) : null}
-            <VendorCard className="client-sale-card">
-              <div className="client-sale-card-foot" style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
-                <div>
-                  <span>Total do pedido</span>
-                  <strong>{formatBRL(checkoutOrder.total_amount ?? 0)}</strong>
-                </div>
-              </div>
-            </VendorCard>
-          </div>
-          <div className="client-overlay-footer" style={{ display: "grid", gap: 8 }}>
-            <button
-              className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
-              disabled={isPendingAction || (paymentMethod === "pix" && !checkoutProofFile)}
-              onClick={handleFinalizeOrder}
-              type="button"
-            >
-              <VendorIcon name="check" size={16} />
-              {paymentMethod === "pix" ? "Enviar comprovante e finalizar pedido" : "Finalizar pedido"}
-            </button>
-          </div>
-        </ClientOverlay>
       ) : null}
     </div>
   );
 }
 
+// ── QuoteEditOverlay — editar itens/entrega de um pedido editável ────────────
 function QuoteEditOverlay({
   isPending,
   onCancelOrder,
@@ -640,9 +464,7 @@ function QuoteEditOverlay({
   const initialCart = useMemo(() => {
     const map: Record<string, number> = {};
     order.items.forEach((item) => {
-      if (item.product_id) {
-        map[item.product_id] = item.quantity;
-      }
+      if (item.product_id) map[item.product_id] = item.quantity;
     });
     return map;
   }, [order.items]);
@@ -651,11 +473,11 @@ function QuoteEditOverlay({
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">(order.delivery_type);
   const [notes, setNotes] = useState(order.notes ?? "");
 
-  const cartEntries = Object.entries(cart).filter(([, quantity]) => quantity > 0);
+  const cartEntries = Object.entries(cart).filter(([, q]) => q > 0);
 
   const updateQty = (productId: string, delta: number) => {
     setCart((current) => {
-      const product = products.find((item) => item.id === productId);
+      const product = products.find((p) => p.id === productId);
       if (!product) return current;
       const nextQty = Math.max(0, Math.min(product.stock_qty, (current[productId] ?? 0) + delta));
       if (nextQty === 0) {
@@ -671,33 +493,33 @@ function QuoteEditOverlay({
     <ClientOverlay>
       <ClientScreenHeader
         onBack={onClose}
-        subtitle={`Orçamento #${String(order.order_code).padStart(4, "0")}`}
-        title="Editar orçamento"
+        subtitle={`Pedido #${String(order.order_code).padStart(4, "0")}`}
+        title="Editar pedido"
       />
       <div className="client-screen-body">
         <VendorSectionLabel>Entrega</VendorSectionLabel>
         <div className="client-cart-delivery">
-          <button
-            className={deliveryType === "pickup" ? "is-active" : ""}
-            onClick={() => setDeliveryType("pickup")}
-            type="button"
-          >
-            <VendorIcon name="store" size={16} />
-            Retirada
-          </button>
-          <button
-            className={deliveryType === "delivery" ? "is-active" : ""}
-            onClick={() => setDeliveryType("delivery")}
-            type="button"
-          >
-            <VendorIcon name="truck" size={16} />
-            Entrega
-          </button>
+          {(
+            [
+              ["pickup", "Retirada", "store"],
+              ["delivery", "Entrega", "truck"]
+            ] as const
+          ).map(([key, label, icon]) => (
+            <button
+              className={deliveryType === key ? "is-active" : ""}
+              key={key}
+              onClick={() => setDeliveryType(key)}
+              type="button"
+            >
+              <VendorIcon name={icon} size={16} />
+              {label}
+            </button>
+          ))}
         </div>
 
         <VendorSectionLabel>Itens</VendorSectionLabel>
         {cartEntries.map(([productId, quantity]) => {
-          const product = products.find((item) => item.id === productId);
+          const product = products.find((p) => p.id === productId);
           if (!product) return null;
           return (
             <VendorCard className="client-sale-card" key={productId}>
@@ -723,7 +545,7 @@ function QuoteEditOverlay({
         <VendorSectionLabel>Adicionar item</VendorSectionLabel>
         <div style={{ display: "grid", gap: 8 }}>
           {products
-            .filter((product) => product.stock_qty > 0 && !cart[product.id])
+            .filter((p) => p.stock_qty > 0 && !cart[p.id])
             .slice(0, 8)
             .map((product) => (
               <button
@@ -751,7 +573,7 @@ function QuoteEditOverlay({
         <VendorSectionLabel>Observações</VendorSectionLabel>
         <textarea
           className="client-cart-notes"
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(e) => setNotes(e.target.value)}
           placeholder="Ex.: trocar cor, ponto de referência..."
           rows={3}
           value={notes}
@@ -781,22 +603,19 @@ function QuoteEditOverlay({
           type="button"
         >
           <VendorIcon name="x" size={16} />
-          Excluir orçamento
+          Excluir pedido
         </button>
       </div>
     </ClientOverlay>
   );
 }
 
-function SaleCard({
-  onOpen,
-  sale
-}: {
-  onOpen: () => void;
-  sale: PortalSaleSummary;
-}) {
-  const awaiting =
-    sale.payment_mode === "installment" && sale.confirmation_status === "pending";
+// ── SaleCard ─────────────────────────────────────────────────────────────────
+function SaleCard({ onOpen, sale }: { onOpen: () => void; sale: PortalSaleSummary }) {
+  const awaiting = sale.payment_mode === "installment" && sale.confirmation_status === "pending";
+
+  const formatLongDate = (value: string) =>
+    new Date(value).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
   return (
     <VendorCard className="client-sale-card" onClick={onOpen}>
@@ -804,8 +623,7 @@ function SaleCard({
         <div>
           <strong>Pedido #{formatSaleCode(sale.sale_code)}</strong>
           <span>
-            {formatLongDate(sale.sold_at)} · {sale.item_count}{" "}
-            {sale.item_count === 1 ? "item" : "itens"}
+            {formatLongDate(sale.sold_at)} · {sale.item_count} {sale.item_count === 1 ? "item" : "itens"}
           </span>
         </div>
         {awaiting ? (

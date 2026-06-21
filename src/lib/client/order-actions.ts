@@ -99,3 +99,19 @@ export async function setStoreOrderPaymentLinkAction(input: {
   revalidatePath(`/painel/pedidos/${input.orderId}`);
   return { success: true as const };
 }
+
+/** Alias semântico de setStoreOrderPaymentLinkAction: gera link → status vira awaiting_card */
+export async function generateCardPaymentLinkAction(input: {
+  storeId: string;
+  storeSlug?: string;
+  orderId: string;
+  paymentLink: string;
+  paymentMessage?: string;
+}) {
+  return setStoreOrderPaymentLinkAction({
+    storeId: input.storeId,
+    orderId: input.orderId,
+    paymentLink: input.paymentLink,
+    paymentMessage: input.paymentMessage
+  });
+}

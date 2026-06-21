@@ -129,6 +129,7 @@ export type PortalOrder = {
   vendor_payment_link?: string | null;
   vendor_payment_message?: string | null;
   payment_proof_url?: string | null;
+  payment_informed?: boolean;
   paid_at?: string | null;
   expected_delivery_date?: string | null;
   delivered_at?: string | null;
@@ -168,6 +169,7 @@ export type VendorStoreOrder = PortalOrder & {
   customer_phone: string;
   customer_avatar_color: string;
   payment_proof_url?: string | null;
+  payment_informed?: boolean;
   expected_delivery_date?: string | null;
 };
 

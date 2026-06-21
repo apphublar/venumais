@@ -14,6 +14,7 @@ import {
   updateStoreOrderDeliveryAction
 } from "@/lib/client/order-actions";
 import { formatCustomerAddress, type StoreOrderDetail } from "@/lib/client/order-types";
+import { getOrderStatusMeta, PAYMENT_META } from "@/lib/client/order-status";
 import { getCustomerInitials } from "@/lib/customers/format";
 import { brStr } from "@/lib/sales/format";
 import { formatBRL, parseBRL } from "@/lib/products/format";
@@ -31,7 +32,10 @@ function orderTitle(order: StoreOrderDetail) {
     return `Encomenda #${order.order_code}`;
   }
 
-  if ((order.status === "quoted" || order.status === "quote") || order.order_type === "quote") {
+  if (
+    ["quote", "quote_answered", "quoted"].includes(order.status) ||
+    order.order_type === "quote"
+  ) {
     return `Orçamento #${order.order_code}`;
   }
 
@@ -63,13 +67,26 @@ export function OrderDetailView({
   const [paymentMessage, setPaymentMessage] = useState(order.vendor_payment_message ?? "");
 
   const needsPricing = order.items.some((item) => item.unit_price === null);
-  const isQuote = order.status === "quoted" || order.status === "quote" || order.order_type === "quote";
+  const isQuote =
+    ["quote", "quote_answered", "quoted"].includes(order.status) || order.order_type === "quote";
   const isWholesale = order.order_type === "wholesale";
   const fromVendor = order.source === "vendor" || order.source === "seller";
   const address = formatCustomerAddress(order.customer);
-  const awaitingPayment = order.status === "awaiting_payment";
+  const awaitingPayment = [
+    "awaiting_payment",
+    "awaiting_card",
+    "cash_on_delivery",
+    "payment_review"
+  ].includes(order.status);
   const paymentReview = order.status === "payment_review";
   const isPaid = order.status === "paid" || order.status === "delivering" || order.status === "delivered";
+  const isAwaitingCard = order.status === "awaiting_card";
+  const needsCardLink =
+    order.status === "awaiting_payment" &&
+    order.customer_payment_method === "card" &&
+    !order.vendor_payment_link;
+  const paymentMethod = order.customer_payment_method;
+  const paymentInformed = (order as StoreOrderDetail & { payment_informed?: boolean }).payment_informed ?? false;
 
   const total = useMemo(
     () =>
@@ -175,22 +192,26 @@ export function OrderDetailView({
           ) : null}
           {(() => {
             const s = order.status;
-            const cls =
-              s === "paid" ? "vendor-order-status-paid" :
-              s === "delivering" ? "vendor-order-status-delivering" :
-              s === "delivered" ? "vendor-order-status-delivered" :
-              s === "payment_review" || s === "awaiting_payment" ? "vendor-order-status-review" :
-              s === "quoted" || s === "quote" ? "vendor-order-status-quote" :
-              "vendor-order-status-new";
-            const label =
-              s === "new" ? "Novo pedido" :
-              s === "quoted" || s === "quote" ? "Orçamento enviado" :
-              s === "awaiting_payment" ? "Aguardando pagamento" :
-              s === "payment_review" ? "Comprovante enviado" :
-              s === "paid" ? "Pago" :
-              s === "delivering" ? "Em entrega" :
-              "Entregue";
-            return <span className={`vendor-order-status ${cls}`}>{label}</span>;
+            const m = getOrderStatusMeta(s);
+            return (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: m.bg,
+                  color: m.fg,
+                  borderRadius: 999,
+                  padding: "3px 10px",
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap"
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: m.dot }} />
+                {m.label}
+              </span>
+            );
           })()}
         </div>
 
@@ -232,7 +253,147 @@ export function OrderDetailView({
           </VendorCard>
         ) : null}
 
-        {order.customer_payment_method ? (
+        {/* ── Seção PAGAMENTO (apenas para pedidos finalizados via catálogo) ── */}
+        {awaitingPayment || isPaid || isAwaitingCard ? (
+          <>
+            <div className="vendor-section-label">Pagamento</div>
+
+            {/* Bloco de método + status */}
+            <VendorCard className="vendor-order-detail-notes">
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  background: "var(--green-50)",
+                  color: "var(--green-700)",
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0
+                }}
+              >
+                <VendorIcon
+                  name={
+                    paymentMethod
+                      ? (PAYMENT_META[paymentMethod]?.icon as "pix" | "wallet" | "cards") ?? "wallet"
+                      : "wallet"
+                  }
+                  size={21}
+                />
+              </div>
+              <div>
+                <strong>
+                  {paymentMethod ? PAYMENT_META[paymentMethod]?.label ?? "Pagamento" : "A definir"}
+                </strong>
+                <span>
+                  {paymentMethod === "pix" &&
+                    (paymentInformed ? "Cliente informou o pagamento" : "Aguardando o cliente pagar")}
+                  {paymentMethod === "cash" && "Combine o valor com o cliente"}
+                  {paymentMethod === "card" && !order.vendor_payment_link && "Gere o link de pagamento abaixo"}
+                  {paymentMethod === "card" &&
+                    order.vendor_payment_link &&
+                    (paymentInformed ? "Cliente pagou no cartão" : "Link enviado, aguardando pagamento")}
+                  {isPaid && " · Pagamento confirmado"}
+                </span>
+              </div>
+            </VendorCard>
+
+            {/* Comprovante PIX (thumbnail xadrez) */}
+            {paymentMethod === "pix" && order.payment_proof_url ? (
+              <VendorCard className="vendor-order-detail-notes" style={{ marginTop: 8 }}>
+                <div
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 10,
+                    background:
+                      "repeating-linear-gradient(45deg,#e8edea 0 8px,#f4f7f5 8px 16px)",
+                    display: "grid",
+                    placeItems: "center",
+                    flexShrink: 0,
+                    color: "var(--vendor-ink-3)"
+                  }}
+                >
+                  <VendorIcon name="receipt" size={22} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ display: "block", fontSize: "0.85rem" }}>
+                    {order.payment_proof_name ?? "Comprovante PIX"}
+                  </strong>
+                  <span style={{ fontSize: "0.75rem" }}>Anexado pelo cliente</span>
+                </div>
+                <a
+                  href={order.payment_proof_url}
+                  rel="noopener noreferrer"
+                  style={{
+                    background: "var(--green-50)",
+                    color: "var(--green-700)",
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "7px 13px",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    whiteSpace: "nowrap"
+                  }}
+                  target="_blank"
+                >
+                  Ver
+                </a>
+              </VendorCard>
+            ) : null}
+
+            {/* Link de cartão gerado */}
+            {paymentMethod === "card" && order.vendor_payment_link ? (
+              <VendorCard
+                className="vendor-order-detail-notes"
+                style={{ marginTop: 8 }}
+              >
+                <VendorIcon name="cards" size={18} style={{ color: "#6d28d9", flexShrink: 0 }} />
+                <span
+                  style={{
+                    flex: 1,
+                    fontSize: 12.5,
+                    color: "var(--vendor-ink-2)",
+                    fontWeight: 600,
+                    fontFamily: "monospace",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {order.vendor_payment_link}
+                </span>
+              </VendorCard>
+            ) : null}
+
+            {/* Formulário para gerar link de cartão */}
+            {needsCardLink ? (
+              <VendorCard className="vendor-order-delivery-box" style={{ marginTop: 8 }}>
+                <strong>Gerar link de pagamento (cartão)</strong>
+                <div className="vendor-order-delivery-grid">
+                  <label className="vendor-field">
+                    <span>URL do link</span>
+                    <input
+                      onChange={(e) => setPaymentLink(e.target.value)}
+                      placeholder="https://..."
+                      value={paymentLink}
+                    />
+                  </label>
+                  <label className="vendor-field">
+                    <span>Mensagem opcional</span>
+                    <input
+                      onChange={(e) => setPaymentMessage(e.target.value)}
+                      placeholder="Ex.: Link válido por 24h"
+                      value={paymentMessage}
+                    />
+                  </label>
+                </div>
+              </VendorCard>
+            ) : null}
+          </>
+        ) : order.customer_payment_method ? (
           <VendorCard className="vendor-order-detail-notes">
             <VendorIcon name="wallet" size={18} />
             <div>
@@ -245,46 +406,6 @@ export function OrderDetailView({
                     : "Dinheiro"}
                 {order.customer_payment_note ? ` · ${order.customer_payment_note}` : ""}
               </span>
-            </div>
-          </VendorCard>
-        ) : null}
-
-        {awaitingPayment && order.customer_payment_method === "card" ? (
-          <VendorCard className="vendor-order-delivery-box">
-            <strong>Link de pagamento (cartão)</strong>
-            <div className="vendor-order-delivery-grid">
-              <label className="vendor-field">
-                <span>URL do pagamento</span>
-                <input
-                  onChange={(event) => setPaymentLink(event.target.value)}
-                  placeholder="https://..."
-                  value={paymentLink}
-                />
-              </label>
-              <label className="vendor-field">
-                <span>Mensagem opcional</span>
-                <input
-                  onChange={(event) => setPaymentMessage(event.target.value)}
-                  placeholder="Ex.: Link válido por 24h"
-                  value={paymentMessage}
-                />
-              </label>
-              <button className="vendor-button vendor-button-ghost" disabled={pending} onClick={savePaymentLink} type="button">
-                Salvar link
-              </button>
-            </div>
-          </VendorCard>
-        ) : null}
-
-        {order.payment_proof_url ? (
-          <VendorCard className="vendor-order-detail-notes">
-            <VendorIcon name="doc" size={18} />
-            <div>
-              <strong>Comprovante enviado</strong>
-              <span>{order.payment_proof_name ?? "Comprovante do pedido"}</span>
-              <a href={order.payment_proof_url} rel="noopener noreferrer" target="_blank">
-                Abrir comprovante
-              </a>
             </div>
           </VendorCard>
         ) : null}
@@ -395,6 +516,7 @@ export function OrderDetailView({
 
       <div className="vendor-order-detail-footer">
         {needsPricing || isQuote ? (
+          /* Enviar orçamento / precificação */
           <button
             className="vendor-button vendor-button-primary vendor-button-full"
             disabled={pending || !complete}
@@ -402,9 +524,27 @@ export function OrderDetailView({
             type="button"
           >
             <VendorIcon name="check" size={18} />
-            {pending ? "Enviando…" : "Enviar orçamento ao cliente"}
+            {pending ? "Enviando…" : "Aprovar e enviar ao cliente"}
           </button>
-        ) : paymentReview ? (
+        ) : isPaid ? (
+          /* Pago: ações de entrega */
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <VendorIcon name="check-circle" size={19} style={{ color: "var(--green-700)" }} />
+            <span style={{ fontWeight: 800, fontSize: 15, color: "var(--green-700)" }}>Pedido pago</span>
+          </div>
+        ) : needsCardLink ? (
+          /* Cartão: gerar link (sem link ainda) */
+          <button
+            className="vendor-button vendor-button-primary vendor-button-full"
+            disabled={pending || !paymentLink.trim()}
+            onClick={savePaymentLink}
+            type="button"
+          >
+            <VendorIcon name="cards" size={18} />
+            {pending ? "Salvando…" : "Gerar link de pagamento"}
+          </button>
+        ) : awaitingPayment ? (
+          /* Qualquer estado aguardando: Marcar como pago */
           <button
             className="vendor-button vendor-button-primary vendor-button-full"
             disabled={pending}
@@ -412,24 +552,12 @@ export function OrderDetailView({
             type="button"
           >
             <VendorIcon name="check" size={18} />
-            {pending ? "Confirmando..." : "Confirmar pagamento"}
+            {pending ? "Confirmando…" : "Marcar como pago"}
           </button>
-        ) : isPaid ? (
-          <div className="vendor-order-delivery-actions">
-            <button className="vendor-button vendor-button-ghost" disabled={pending} onClick={() => updateDelivery("delivering")} type="button">
-              Em entrega
-            </button>
-            <button className="vendor-button vendor-button-primary" disabled={pending} onClick={() => updateDelivery("delivered")} type="button">
-              Marcar entregue
-            </button>
-          </div>
-        ) : awaitingPayment ? (
+        ) : order.status === "new" || order.status === "quote" ? (
+          /* Aguardando cliente */
           <button className="vendor-button vendor-button-ghost vendor-button-full" disabled type="button">
-            Aguardando envio do comprovante
-          </button>
-        ) : order.status === "new" ? (
-          <button className="vendor-button vendor-button-ghost vendor-button-full" disabled type="button">
-            Aguardando cliente finalizar pedido
+            Aguardando o cliente finalizar o pedido
           </button>
         ) : (
           <Link

@@ -5,6 +5,45 @@ import { pickAvatarColor, normalizePhone } from "@/lib/customers/format";
 import { getCustomerSaleForPortal, getPortalOrderForEdit } from "@/lib/client/queries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
+// ─── Upload helper (reutilizado por várias actions) ───────────────────────────
+async function uploadPaymentProof(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  file: File,
+  storeSlug: string,
+  orderId: string
+): Promise<{ url: string; name: string } | { error: string }> {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user?.id) {
+    return { error: "Sessão inválida. Faça login novamente." };
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: "O comprovante deve ter no máximo 5 MB." };
+  }
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  if (!allowed.includes(file.type)) {
+    return { error: "Formato inválido. Envie JPG, PNG, WEBP ou PDF." };
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filePath = `${user.id}/${storeSlug}/${orderId}-${Date.now()}-${safeName}`;
+  const upload = await supabase.storage.from("order-payment-proofs").upload(filePath, file, {
+    cacheControl: "3600",
+    upsert: false
+  });
+
+  if (upload.error) {
+    return { error: "Não foi possível enviar o comprovante." };
+  }
+
+  const { data: publicData } = supabase.storage.from("order-payment-proofs").getPublicUrl(filePath);
+  return { url: publicData.publicUrl, name: file.name };
+}
+
 export type ClientActionState = {
   error?: string;
   customer?: ClientSessionCustomer;
@@ -365,6 +404,204 @@ export async function finalizeClientOrderAction(input: {
   return {};
 }
 
+/**
+ * checkoutClientOrderAction
+ * Cria o pedido E finaliza em uma única ação (fluxo do CartReview do protótipo).
+ * Para pedidos com item sem preço: apenas cria (status=quote), sem pagamento.
+ * Comprovante PIX é OPCIONAL.
+ */
+export async function checkoutClientOrderAction(
+  formData: FormData
+): Promise<{ error?: string; orderId?: string; isQuote?: boolean }> {
+  const storeId = String(formData.get("storeId") ?? "");
+  const storeSlug = String(formData.get("storeSlug") ?? "");
+  const deliveryType = String(formData.get("deliveryType") ?? "pickup") as "pickup" | "delivery";
+  const notes = String(formData.get("notes") ?? "");
+  const couponCode = String(formData.get("couponCode") ?? "");
+  const paymentMethod = String(formData.get("paymentMethod") ?? "") as "pix" | "cash" | "card" | "";
+  const isQuote = formData.get("isQuote") === "true";
+  const receipt = formData.get("receipt");
+  const itemsJson = String(formData.get("items") ?? "[]");
+
+  if (!storeId || !storeSlug) {
+    return { error: "Dados inválidos para criar o pedido." };
+  }
+
+  let items: Array<{ product_id: string; quantity: number }>;
+  try {
+    items = JSON.parse(itemsJson);
+  } catch {
+    return { error: "Itens inválidos." };
+  }
+
+  if (!items.length) {
+    return { error: "Adicione ao menos um item ao pedido." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  // 1. Criar pedido
+  const { data: orderId, error: createError } = await supabase.rpc("create_client_order", {
+    p_store_id: storeId,
+    p_delivery_type: deliveryType,
+    p_notes: notes.trim() || "",
+    p_coupon_code: couponCode.trim() || "",
+    p_items: items
+  });
+
+  if (createError) {
+    return { error: clientAuthError(createError.message) };
+  }
+
+  const oid = String(orderId);
+
+  // 2. Pedidos com item sem preço terminam aqui (status=quote, sem pagamento)
+  if (isQuote) {
+    revalidatePath(`/loja/${storeSlug}`);
+    revalidatePath("/painel/pedidos");
+    return { orderId: oid, isQuote: true };
+  }
+
+  if (!paymentMethod || !["pix", "cash", "card"].includes(paymentMethod)) {
+    return { error: "Escolha uma forma de pagamento." };
+  }
+
+  // 3. Finalizar com método de pagamento
+  const { error: finalizeError } = await supabase.rpc("finalize_customer_order_for_portal", {
+    p_store_id: storeId,
+    p_order_id: oid,
+    p_payment_method: paymentMethod,
+    p_payment_note: null
+  });
+
+  if (finalizeError) {
+    return { error: clientAuthError(finalizeError.message) };
+  }
+
+  // 4. PIX + comprovante opcional
+  if (paymentMethod === "pix" && receipt instanceof File && receipt.size > 0) {
+    const uploadResult = await uploadPaymentProof(supabase, receipt, storeSlug, oid);
+    if ("error" in uploadResult) {
+      return { error: uploadResult.error };
+    }
+    await supabase.rpc("inform_order_payment_for_portal", {
+      p_store_id: storeId,
+      p_order_id: oid,
+      p_proof_url: uploadResult.url,
+      p_proof_name: uploadResult.name
+    });
+  }
+
+  revalidatePath(`/loja/${storeSlug}`);
+  revalidatePath("/painel/pedidos");
+  return { orderId: oid, isQuote: false };
+}
+
+/**
+ * informOrderPaymentAction — "Já paguei" ou "Pagar com cartão"
+ * Seta payment_informed=true; comprovante PIX é OPCIONAL.
+ * Só o VENDEDOR confirma o pagamento como "pago".
+ */
+export async function informOrderPaymentAction(
+  formData: FormData
+): Promise<{ error?: string }> {
+  const storeId = String(formData.get("storeId") ?? "");
+  const storeSlug = String(formData.get("storeSlug") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  const receipt = formData.get("receipt");
+
+  if (!storeId || !storeSlug || !orderId) {
+    return { error: "Dados inválidos." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  let proofUrl: string | null = null;
+  let proofName: string | null = null;
+
+  if (receipt instanceof File && receipt.size > 0) {
+    const uploadResult = await uploadPaymentProof(supabase, receipt, storeSlug, orderId);
+    if ("error" in uploadResult) {
+      return { error: uploadResult.error };
+    }
+    proofUrl = uploadResult.url;
+    proofName = uploadResult.name;
+  }
+
+  const { error } = await supabase.rpc("inform_order_payment_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_proof_url: proofUrl,
+    p_proof_name: proofName
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  revalidatePath(`/loja/${storeSlug}`);
+  revalidatePath("/painel/pedidos");
+  return {};
+}
+
+/**
+ * getPortalOrderDetailForViewAction — detalhe completo para o overlay ClientCatalogOrderDetail.
+ * Funciona para TODOS os status (não apenas editáveis).
+ */
+export async function getPortalOrderDetailForViewAction(
+  storeId: string,
+  orderId: string
+) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("get_customer_order_detail_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+
+  if (error || !data) {
+    return { error: "Pedido não encontrado." };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return { order: row as OrderDetailView };
+}
+
+export type OrderDetailView = {
+  id: string;
+  order_code: number;
+  status: string;
+  order_type: string;
+  delivery_type: string;
+  customer_payment_method: "pix" | "cash" | "card" | null;
+  customer_payment_note: string | null;
+  vendor_payment_link: string | null;
+  vendor_payment_message: string | null;
+  payment_proof_url: string | null;
+  payment_proof_name: string | null;
+  payment_informed: boolean;
+  paid_at: string | null;
+  notes: string | null;
+  coupon_code: string | null;
+  subtotal_amount: number | null;
+  discount_amount: number | null;
+  total_amount: number | null;
+  quote_sent_at: string | null;
+  customer_confirmed_at: string | null;
+  edited_at: string | null;
+  created_at: string;
+  items: Array<{
+    id: string;
+    product_id: string | null;
+    product_name: string;
+    quantity: number;
+    unit_price: number | null;
+  }>;
+};
+
+/**
+ * finalizeClientOrderWithPaymentAction — fecha um orçamento existente com forma de pagamento.
+ * Usado no overlay ClientCatalogOrderDetail quando status = quote_answered.
+ * Comprovante PIX é OPCIONAL.
+ */
 export async function finalizeClientOrderWithPaymentAction(
   formData: FormData
 ): Promise<{ error?: string }> {
@@ -383,19 +620,6 @@ export async function finalizeClientOrderWithPaymentAction(
     return { error: "Forma de pagamento inválida." };
   }
 
-  if (paymentMethod === "pix") {
-    if (!(receipt instanceof File) || receipt.size <= 0) {
-      return { error: "No PIX, anexe o comprovante para concluir o pedido." };
-    }
-    if (receipt.size > 5 * 1024 * 1024) {
-      return { error: "O comprovante deve ter no máximo 5MB." };
-    }
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(receipt.type)) {
-      return { error: "Formato inválido. Envie JPG, PNG, WEBP ou PDF." };
-    }
-  }
-
   const supabase = await getSupabaseServerClient();
   const { error: finalizeError } = await supabase.rpc("finalize_customer_order_for_portal", {
     p_store_id: storeId,
@@ -408,40 +632,18 @@ export async function finalizeClientOrderWithPaymentAction(
     return { error: clientAuthError(finalizeError.message) };
   }
 
-  let proofUrl: string | null = null;
-  let proofName: string | null = null;
-
+  // Comprovante PIX opcional: se anexado, seta payment_informed=true
   if (paymentMethod === "pix" && receipt instanceof File && receipt.size > 0) {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user?.id) {
-      return { error: "Sessão inválida. Faça login novamente." };
+    const uploadResult = await uploadPaymentProof(supabase, receipt, storeSlug, orderId);
+    if ("error" in uploadResult) {
+      return { error: uploadResult.error };
     }
-
-    const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filePath = `${user.id}/${storeSlug}/${orderId}-${Date.now()}-${safeName}`;
-    const upload = await supabase.storage.from("order-payment-proofs").upload(filePath, receipt, {
-      cacheControl: "3600",
-      upsert: false
+    await supabase.rpc("inform_order_payment_for_portal", {
+      p_store_id: storeId,
+      p_order_id: orderId,
+      p_proof_url: uploadResult.url,
+      p_proof_name: uploadResult.name
     });
-    if (upload.error) {
-      return { error: "Não foi possível enviar o comprovante do pedido." };
-    }
-    const { data: publicData } = supabase.storage.from("order-payment-proofs").getPublicUrl(filePath);
-    proofUrl = publicData.publicUrl;
-    proofName = receipt.name;
-  }
-
-  const { error: reportError } = await supabase.rpc("report_order_payment_for_portal", {
-    p_store_id: storeId,
-    p_order_id: orderId,
-    p_proof_url: proofUrl,
-    p_proof_name: proofName
-  });
-
-  if (reportError) {
-    return { error: clientAuthError(reportError.message) };
   }
 
   revalidatePath(`/loja/${storeSlug}`);
@@ -509,13 +711,14 @@ export async function reportOrderPaymentAction(formData: FormData): Promise<{ er
   return {};
 }
 
+/** @deprecated Use informOrderPaymentAction. Mantido para backward compat. */
 export async function notifyOrderPaymentAction(input: {
   storeId: string;
   storeSlug: string;
   orderId: string;
 }): Promise<{ error?: string }> {
   const supabase = await getSupabaseServerClient();
-  const { error } = await supabase.rpc("report_order_payment_for_portal", {
+  const { error } = await supabase.rpc("inform_order_payment_for_portal", {
     p_store_id: input.storeId,
     p_order_id: input.orderId,
     p_proof_url: null,
