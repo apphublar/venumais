@@ -54,7 +54,11 @@ export function getBrandColorVars(brandColor: string, brandTextColor?: string | 
     "--client-brand-on-rgb": onStrong,
     "--vendor-brand-g1": rgbToHex(gradientLight),
     "--vendor-brand-g2": rgbToHex(gradientDark),
-    "--client-brand-g1": rgbToHex(gradientLight),
-    "--client-brand-g2": rgbToHex(gradientDark)
+    "--client-brand-g1": rgbToHex(light),
+    "--client-brand-g2": rgbToHex(dark),
+    "--client-green-600": rgbToHex(light),
+    "--client-green-700": rgbToHex(dark),
+    "--vendor-green-600": rgbToHex(light),
+    "--vendor-green-700": rgbToHex(dark)
   } as Record<string, string>;
 }

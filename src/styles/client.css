@@ -1070,19 +1070,12 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.client-app .vendor-button-primary {
-  background: var(--client-green-600);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(18, 138, 93, 0.28);
-}
-
 .client-conta-whats-button {
   flex: 1;
   justify-content: center;
   background: var(--client-green-600);
-  color: #fff;
+  color: var(--client-brand-on);
   border: none;
-  box-shadow: 0 2px 8px rgba(18, 138, 93, 0.22);
 }
 
 .client-conta-alert-actions .vendor-button-primary {
