@@ -52,6 +52,8 @@ function parseProductForm(formData: FormData) {
     Number.parseInt(String(formData.get("minStockQty") ?? "0"), 10) || 0
   );
   const priceVisible = formData.get("priceVisible") === "on";
+  const sellWithoutStock = formData.get("sellWithoutStock") === "on";
+  const stockVisible = formData.get("stockVisible") !== "off";
   const featured = formData.get("featured") === "on";
   const active = formData.get("active") !== "off";
   const variations = parseVariations(String(formData.get("variations") ?? ""));
@@ -75,6 +77,8 @@ function parseProductForm(formData: FormData) {
       stock_qty: stockQty,
       min_stock_qty: minStockQty,
       price_visible: priceVisible,
+      sell_without_stock: sellWithoutStock,
+      stock_visible: stockVisible,
       featured,
       active,
       variations,

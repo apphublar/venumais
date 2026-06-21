@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ClientCartSheet } from "@/components/client/client-cart-sheet";
-import { VendorBrandMark } from "@/components/vendor/brand-mark";
+import { StoreBrandLogo } from "@/components/client/store-brand-logo";
 import { VendorIcon } from "@/components/vendor/icon";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import type { ClientSessionCustomer } from "@/lib/client/actions";
@@ -10,11 +10,25 @@ import { formatBRL, getEffectivePrice } from "@/lib/products/format";
 import type { PublicProduct, PublicStore } from "@/lib/client/queries";
 import { getCustomerInitials } from "@/lib/customers/format";
 
+function maxCartQty(product: PublicProduct) {
+  return product.sell_without_stock ? 999 : Math.max(0, product.stock_qty);
+}
+
+function stockLabel(product: PublicProduct) {
+  if (!product.stock_visible) return null;
+  if (product.sell_without_stock && product.stock_qty <= 0) {
+    return "Sob encomenda";
+  }
+  if (product.stock_qty <= 0) return "Esgotado";
+  return `${product.stock_qty} disp.`;
+}
+
 export function ClientCatalog({
   customer,
   isDemo,
   onOpenAccount,
   onOrderSubmitted,
+  onSwitchStore,
   products,
   store
 }: {
@@ -22,6 +36,7 @@ export function ClientCatalog({
   isDemo?: boolean;
   onOpenAccount?: () => void;
   onOrderSubmitted: (message: string) => void;
+  onSwitchStore?: () => void;
   products: PublicProduct[];
   store: PublicStore;
 }) {
@@ -57,8 +72,12 @@ export function ClientCatalog({
   const customerInitial = customer ? getCustomerInitials(customer.full_name) : "C";
 
   const adjustCart = (productId: string, delta: number) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
     setCart((current) => {
-      const next = Math.max(0, (current[productId] ?? 0) + delta);
+      const limit = maxCartQty(product);
+      const next = Math.max(0, Math.min(limit, (current[productId] ?? 0) + delta));
       if (next === 0) {
         const copy = { ...current };
         delete copy[productId];
@@ -73,12 +92,24 @@ export function ClientCatalog({
     <div className="client-main">
       <div className="client-hero">
         <div className="client-hero-top">
-          <VendorBrandMark label={store.name} size={50} radius={15} />
+          <StoreBrandLogo label={store.name} logoUrl={store.logo_url} radius={15} size={50} />
           <div className="client-hero-copy">
             <strong>{store.name}</strong>
             <span>{store.catalog_tagline}</span>
           </div>
-          {customer && onOpenAccount ? (
+          <div className="client-hero-actions">
+            {onSwitchStore ? (
+              <button
+                aria-label="Trocar de loja"
+                className="client-hero-switch-store"
+                onClick={onSwitchStore}
+                title="Trocar de loja"
+                type="button"
+              >
+                <VendorIcon name="split" size={18} />
+              </button>
+            ) : null}
+            {customer && onOpenAccount ? (
             <button
               aria-label="Minha conta"
               className="client-hero-avatar-button"
@@ -94,6 +125,7 @@ export function ClientCatalog({
               {customerInitial}
             </div>
           )}
+          </div>
         </div>
         <div className="client-search">
           <VendorIcon name="search" size={18} />
@@ -136,6 +168,10 @@ export function ClientCatalog({
             price: product.price,
             promo_price: product.promo_price
           });
+          const limit = maxCartQty(product);
+          const currentQty = cart[product.id] ?? 0;
+          const atLimit = !product.sell_without_stock && currentQty >= product.stock_qty;
+          const availability = stockLabel(product);
 
           return (
             <article className="client-product-card" key={product.id}>
@@ -152,12 +188,17 @@ export function ClientCatalog({
               <div className="client-product-body">
                 <strong>{product.name}</strong>
                 <div className="client-product-meta">
-                  {product.price_visible ? (
-                    <strong className="client-product-price">{formatBRL(price)}</strong>
-                  ) : (
-                    <span className="client-product-quote">Sob orçamento</span>
-                  )}
-                  {cart[product.id] > 0 ? (
+                  <div className="client-product-pricing">
+                    {product.price_visible ? (
+                      <strong className="client-product-price">{formatBRL(price)}</strong>
+                    ) : (
+                      <span className="client-product-quote">Sob orçamento</span>
+                    )}
+                    {availability ? (
+                      <span className="client-product-stock">{availability}</span>
+                    ) : null}
+                  </div>
+                  {currentQty > 0 ? (
                     <div className="client-product-qty-controls">
                       <button
                         className="client-qty-button"
@@ -166,9 +207,10 @@ export function ClientCatalog({
                       >
                         <VendorIcon name="arrowDown" size={14} />
                       </button>
-                      <span className="client-product-qty-value">{cart[product.id]}</span>
+                      <span className="client-product-qty-value">{currentQty}</span>
                       <button
                         className="client-qty-button client-qty-button-primary"
+                        disabled={atLimit}
                         onClick={() => adjustCart(product.id, 1)}
                         type="button"
                       >
@@ -178,6 +220,7 @@ export function ClientCatalog({
                   ) : (
                     <button
                       className="client-product-add"
+                      disabled={limit <= 0}
                       onClick={() => adjustCart(product.id, 1)}
                       type="button"
                     >

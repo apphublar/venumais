@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ClientOverlay } from "@/components/client/client-overlay";
 import { ClientScreenHeader } from "@/components/client/client-screen-header";
 import { ClientOrderRecibo } from "@/components/client/client-order-recibo";
+import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
-import { buildPixPayload } from "@/lib/pix/build-pix-code";
 import { formatBRL } from "@/lib/products/format";
 import {
   getPortalOrderDetailForViewAction,
@@ -78,7 +78,6 @@ export function ClientCatalogOrderDetail({
   const [showReceipt, setShowReceipt] = useState(false);
   const [pgto, setPgto] = useState<PaymentMethod>("pix");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [pixCopied, setPixCopied] = useState(false);
   const [cardLinkOpened, setCardLinkOpened] = useState(false);
   const [cardReceiptFile, setCardReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,23 +98,6 @@ export function ClientCatalogOrderDetail({
   const paymentMethod = (order?.customer_payment_method ?? initialOrder.customer_payment_method) as PaymentMethod | null;
   const total = order?.total_amount ?? initialOrder.total_amount ?? 0;
   const paymentInformed = order?.payment_informed ?? initialOrder.payment_informed ?? false;
-
-  const pixPayload = useMemo(
-    () =>
-      buildPixPayload({
-        amount: total,
-        pixKey: store.pix_key,
-        receiverName: store.pix_receiver_name,
-        storeName: store.name
-      }),
-    [total, store.pix_key, store.pix_receiver_name, store.name]
-  );
-
-  const copyPix = () => {
-    navigator.clipboard.writeText(pixPayload).catch(() => {});
-    setPixCopied(true);
-    setTimeout(() => setPixCopied(false), 1800);
-  };
 
   const getItemProduct = (productId: string | null) => {
     if (!productId) return null;
@@ -212,27 +194,18 @@ export function ClientCatalogOrderDetail({
   const canCancel = isOrderCancellable(status) && status !== "cancelled";
   const canViewReceipt = isOrderReceiptAvailable(status) && Boolean(order);
 
-  const pixBlock = (
-    <div className="client-cart-pix-step">
-      <button className="client-cart-pix-copy" onClick={copyPix} type="button">
-        <code>{pixPayload}</code>
-        <span>
-          <VendorIcon name={pixCopied ? "check" : "copy"} size={16} />
-          {pixCopied ? "Copiado" : "Copiar"}
-        </span>
-      </button>
-      <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
-        <input
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-          ref={fileInputRef}
-          style={{ display: "none" }}
-          type="file"
-        />
-        <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
-        <span>{receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}</span>
-      </label>
-    </div>
+  const pixReceiptControl = (
+    <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
+      <input
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        type="file"
+      />
+      <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
+      <span>{receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}</span>
+    </label>
   );
 
   const formattedDate = new Date(initialOrder.created_at).toLocaleDateString("pt-BR", {
@@ -422,7 +395,13 @@ export function ClientCatalogOrderDetail({
                     </button>
                   ))}
                 </div>
-                {pgto === "pix" && pixBlock}
+                {pgto === "pix" && (
+                  <ClientPixPaymentBlock
+                    amount={total}
+                    receiptControl={pixReceiptControl}
+                    store={store}
+                  />
+                )}
                 {pgto === "cash" && (
                   <p className="client-cart-pix-hint">
                     A loja vai combinar o pagamento com você{" "}
@@ -467,16 +446,7 @@ export function ClientCatalogOrderDetail({
                   <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
                     PAGUE COM PIX
                   </p>
-                  <div className="client-pay-pix-amount-card" style={{ marginBottom: 10 }}>
-                    <span>Pague com PIX</span>
-                    <strong>{formatBRL(total)}</strong>
-                    {store.pix_receiver_name ? (
-                      <small>para {store.pix_receiver_name}</small>
-                    ) : (
-                      <small>para {store.name}</small>
-                    )}
-                  </div>
-                  {pixBlock}
+                  <ClientPixPaymentBlock amount={total} receiptControl={pixReceiptControl} store={store} />
                   {error ? <p className="client-auth-error" style={{ marginTop: 8 }}>{error}</p> : null}
                   {!paymentInformed ? (
                     <button

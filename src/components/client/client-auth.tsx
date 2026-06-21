@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { VendorBrandMark } from "@/components/vendor/brand-mark";
+import { StoreBrandLogo } from "@/components/client/store-brand-logo";
 import { VendorIcon } from "@/components/vendor/icon";
 import {
   clientSignInAction,
@@ -102,7 +102,7 @@ export function ClientAuth({
         </button>
 
         <div className="client-auth-brand">
-          <VendorBrandMark label={store.name} onLight radius={18} size={60} />
+          <StoreBrandLogo label={store.name} logoUrl={store.logo_url} onLight radius={18} size={60} />
         </div>
         <strong className="client-auth-title">{store.name}</strong>
         <p className="client-auth-subtitle">

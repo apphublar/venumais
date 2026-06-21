@@ -53,6 +53,8 @@ export function ProductForm({
   );
   const [barcode, setBarcode] = useState(product?.barcode ?? "");
   const [priceVisible, setPriceVisible] = useState(product?.price_visible ?? true);
+  const [sellWithoutStock, setSellWithoutStock] = useState(product?.sell_without_stock ?? false);
+  const [stockVisible, setStockVisible] = useState(product?.stock_visible ?? true);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -459,6 +461,43 @@ export function ProductForm({
           Você é avisado quando o estoque chegar nesse mínimo.
         </p>
 
+        <VendorCard className="vendor-setting-card">
+          <span
+            className="vendor-setting-card-icon"
+            style={{
+              background: sellWithoutStock ? "#fff7ed" : "var(--vendor-chip)",
+              color: sellWithoutStock ? "#b45309" : "var(--vendor-ink-3)"
+            }}
+          >
+            <VendorIcon name="box" size={20} />
+          </span>
+          <div className="vendor-setting-card-body">
+            <strong>Vender sem estoque</strong>
+            <span>Cliente pode pedir mesmo com quantidade zerada</span>
+          </div>
+          <VendorToggle
+            on={sellWithoutStock}
+            onChange={() => setSellWithoutStock((value) => !value)}
+          />
+        </VendorCard>
+
+        <VendorCard className="vendor-setting-card">
+          <span
+            className="vendor-setting-card-icon"
+            style={{
+              background: stockVisible ? "var(--vendor-green-50)" : "var(--vendor-chip)",
+              color: stockVisible ? "var(--vendor-green-700)" : "var(--vendor-ink-3)"
+            }}
+          >
+            <VendorIcon name="store" size={20} />
+          </span>
+          <div className="vendor-setting-card-body">
+            <strong>Exibir quantidade no catálogo</strong>
+            <span>Cliente vê quantas unidades estão disponíveis</span>
+          </div>
+          <VendorToggle on={stockVisible} onChange={() => setStockVisible((value) => !value)} />
+        </VendorCard>
+
         <div className="vendor-form-section-title">Identificação</div>
 
         <label className="vendor-field">
@@ -611,6 +650,8 @@ export function ProductForm({
         </VendorCard>
 
         <input name="priceVisible" type="hidden" value={priceVisible ? "on" : "off"} />
+        <input name="sellWithoutStock" type="hidden" value={sellWithoutStock ? "on" : "off"} />
+        <input name="stockVisible" type="hidden" value={stockVisible ? "on" : "off"} />
         <input name="featured" type="hidden" value={featured ? "on" : "off"} />
         <input name="active" type="hidden" value={active ? "on" : "off"} />
       </VendorFormShell>

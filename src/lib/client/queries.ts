@@ -7,6 +7,7 @@ export type PublicStore = {
   brand_color: string;
   brand_text_color?: string | null;
   catalog_tagline: string;
+  logo_url: string | null;
   pix_key: string | null;
   pix_receiver_name: string | null;
 };
@@ -21,6 +22,8 @@ export type PublicProduct = {
   price_visible: boolean;
   featured: boolean;
   stock_qty: number;
+  sell_without_stock: boolean;
+  stock_visible: boolean;
   thumb_color: string;
   image_url: string | null;
   variations: string[];
@@ -35,7 +38,43 @@ export async function getPublicStoreBySlug(slug: string) {
   }
 
   const row = Array.isArray(data) ? data[0] : data;
-  return (row as PublicStore | undefined) ?? null;
+  if (!row) {
+    return null;
+  }
+
+  const store = row as PublicStore;
+  return {
+    ...store,
+    logo_url: store.logo_url ?? null,
+    pix_key: store.pix_key ?? null,
+    pix_receiver_name: store.pix_receiver_name ?? null,
+    catalog_tagline: store.catalog_tagline ?? "Catálogo online"
+  };
+}
+
+export async function listCustomerStoresForPortal() {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("list_customer_stores_for_portal");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as PublicStore[]).map((row) => ({
+    ...row,
+    logo_url: row.logo_url ?? null,
+    pix_key: row.pix_key ?? null,
+    pix_receiver_name: row.pix_receiver_name ?? null,
+    catalog_tagline: row.catalog_tagline ?? "Catálogo online"
+  }));
 }
 
 export async function listPublicProducts(storeId: string) {
@@ -54,6 +93,8 @@ export async function listPublicProducts(storeId: string) {
     promo_price: row.promo_price === null ? null : Number(row.promo_price),
     wholesale_price: row.wholesale_price === null ? null : Number(row.wholesale_price),
     stock_qty: Number(row.stock_qty),
+    sell_without_stock: Boolean(row.sell_without_stock),
+    stock_visible: row.stock_visible !== false,
     variations: Array.isArray(row.variations) ? row.variations.map(String) : []
   }));
 }

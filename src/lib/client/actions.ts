@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { pickAvatarColor, normalizePhone } from "@/lib/customers/format";
-import { getCustomerSaleForPortal, getPortalOrderForEdit } from "@/lib/client/queries";
+import { getCustomerSaleForPortal, getPortalOrderForEdit, listCustomerStoresForPortal, type PublicStore } from "@/lib/client/queries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 // ─── Upload helper (reutilizado por várias actions) ───────────────────────────
@@ -47,6 +47,7 @@ async function uploadPaymentProof(
 export type ClientActionState = {
   error?: string;
   customer?: ClientSessionCustomer;
+  stores?: PublicStore[];
 };
 
 export type ClientSessionCustomer = {
@@ -222,6 +223,33 @@ export async function clientSignUpAction(
 
   revalidatePath(`/loja/${storeSlug}`);
   return { customer };
+}
+
+export async function clientPortalSignInAction(
+  _prevState: ClientActionState,
+  formData: FormData
+): Promise<ClientActionState> {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  const password = String(formData.get("password") ?? "");
+
+  if (!email || !password) {
+    return { error: "Informe email e senha." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  const stores = await listCustomerStoresForPortal();
+
+  if (!stores.length) {
+    return { error: "Nenhuma loja vinculada a esta conta. Acesse pelo link que o vendedor enviou." };
+  }
+
+  return { stores };
 }
 
 export async function clientSignInAction(

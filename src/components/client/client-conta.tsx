@@ -56,6 +56,7 @@ export function ClientConta({
   customer,
   onClose,
   onGoPay,
+  onSwitchStore,
   onToast,
   owedAmount,
   store
@@ -63,6 +64,7 @@ export function ClientConta({
   customer: PortalCustomer;
   onClose: () => void;
   onGoPay: () => void;
+  onSwitchStore?: () => void;
   onToast: (message: string) => void;
   owedAmount: number;
   store: PublicStore;
@@ -465,6 +467,13 @@ export function ClientConta({
             </div>
           </VendorCard>
         )}
+
+        {onSwitchStore ? (
+          <button className="client-conta-switch-store" onClick={onSwitchStore} type="button">
+            <VendorIcon name="split" size={18} />
+            Trocar de loja
+          </button>
+        ) : null}
 
         <button className="client-conta-logout" disabled={pending} onClick={logout} type="button">
           Sair da conta

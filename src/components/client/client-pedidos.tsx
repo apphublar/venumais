@@ -441,7 +441,8 @@ function QuoteEditOverlay({
     setCart((current) => {
       const product = products.find((p) => p.id === productId);
       if (!product) return current;
-      const nextQty = Math.max(0, Math.min(product.stock_qty, (current[productId] ?? 0) + delta));
+      const limit = product.sell_without_stock ? 999 : product.stock_qty;
+      const nextQty = Math.max(0, Math.min(limit, (current[productId] ?? 0) + delta));
       if (nextQty === 0) {
         const copy = { ...current };
         delete copy[productId];
@@ -507,7 +508,7 @@ function QuoteEditOverlay({
         <VendorSectionLabel>Adicionar item</VendorSectionLabel>
         <div style={{ display: "grid", gap: 8 }}>
           {products
-            .filter((p) => p.stock_qty > 0 && !cart[p.id])
+            .filter((p) => (p.sell_without_stock || p.stock_qty > 0) && !cart[p.id])
             .slice(0, 8)
             .map((product) => (
               <button

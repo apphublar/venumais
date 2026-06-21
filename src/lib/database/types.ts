@@ -61,6 +61,8 @@ export type Product = {
   stock_qty: number;
   min_stock_qty: number;
   price_visible: boolean;
+  sell_without_stock: boolean;
+  stock_visible: boolean;
   featured: boolean;
   active: boolean;
   thumb_color: string;

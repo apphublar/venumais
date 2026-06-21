@@ -58,7 +58,7 @@ export function OrderDetailView({
     order.customer_payment_method === "card" &&
     !order.vendor_payment_link;
   const paymentMethod = order.customer_payment_method;
-  const paymentInformed = (order as StoreOrderDetail & { payment_informed?: boolean }).payment_informed ?? false;
+  const paymentInformed = order.payment_informed ?? false;
 
   const total = useMemo(
     () =>
@@ -358,7 +358,7 @@ export function OrderDetailView({
               </div>
             </VendorCard>
 
-            {paymentMethod === "pix" && order.payment_proof_url ? (
+            {order.payment_proof_url ? (
               <VendorCard className="vendor-order-detail-subcard">
                 <div
                   style={{
@@ -377,7 +377,12 @@ export function OrderDetailView({
                 </div>
                 <div className="vendor-order-detail-notice-copy">
                   <strong style={{ display: "block", fontSize: "0.85rem", color: "var(--vendor-ink-1)" }}>
-                    {order.payment_proof_name ?? "Comprovante PIX"}
+                    {order.payment_proof_name ??
+                      (paymentMethod === "card"
+                        ? "Comprovante de cartão"
+                        : paymentMethod === "pix"
+                          ? "Comprovante PIX"
+                          : "Comprovante de pagamento")}
                   </strong>
                   <span style={{ fontSize: "0.75rem" }}>Anexado pelo cliente</span>
                 </div>
@@ -401,6 +406,23 @@ export function OrderDetailView({
                 >
                   Ver
                 </a>
+              </VendorCard>
+            ) : null}
+
+            {paymentInformed && !isPaid ? (
+              <VendorCard
+                className="vendor-order-detail-subcard"
+                style={{ background: "var(--green-50)", borderColor: "var(--green-600)" }}
+              >
+                <VendorIcon name="check-circle" size={20} style={{ color: "var(--green-700)", flexShrink: 0 }} />
+                <div className="vendor-order-detail-notice-copy">
+                  <strong style={{ display: "block", fontSize: "0.85rem", color: "var(--green-700)" }}>
+                    Cliente informou o pagamento
+                  </strong>
+                  <span style={{ fontSize: "0.75rem" }}>
+                    Confira o comprovante e confirme o recebimento abaixo.
+                  </span>
+                </div>
               </VendorCard>
             ) : null}
 

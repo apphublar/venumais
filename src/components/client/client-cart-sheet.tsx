@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
 import type { ClientSessionCustomer } from "@/lib/client/actions";
 import { checkoutClientOrderAction } from "@/lib/client/actions";
-import { buildPixPayload } from "@/lib/pix/build-pix-code";
 import { formatBRL, getEffectivePrice } from "@/lib/products/format";
 import { couponDiscount } from "@/lib/sales/format";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -56,7 +56,6 @@ export function ClientCartSheet({
   const [couponPending, setCouponPending] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [pixCopied, setPixCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,17 +84,6 @@ export function ClientCartSheet({
 
   const discount = hasVisiblePrices ? couponDiscount(validatedCoupon, subtotal) : 0;
   const total = subtotal - discount;
-
-  const pixPayload = useMemo(
-    () =>
-      buildPixPayload({
-        amount: total,
-        pixKey: store.pix_key,
-        receiverName: store.pix_receiver_name,
-        storeName: store.name
-      }),
-    [total, store.pix_key, store.pix_receiver_name, store.name]
-  );
 
   useEffect(() => {
     if (!couponCode.trim()) {
@@ -131,12 +119,6 @@ export function ClientCartSheet({
     const next = { ...cart };
     delete next[productId];
     setCart(next);
-  };
-
-  const copyPix = () => {
-    navigator.clipboard.writeText(pixPayload).catch(() => {});
-    setPixCopied(true);
-    setTimeout(() => setPixCopied(false), 1800);
   };
 
   const handleContinue = () => {
@@ -383,40 +365,25 @@ export function ClientCartSheet({
               </div>
 
               {paymentMethod === "pix" && (
-                <div className="client-cart-pix-step">
-                  <div className="client-pay-pix-amount-card">
-                    <span>Pague com PIX</span>
-                    <strong>{formatBRL(total)}</strong>
-                    {store.pix_receiver_name ? (
-                      <small>para {store.pix_receiver_name}</small>
-                    ) : (
-                      <small>para {store.name}</small>
-                    )}
-                  </div>
-                  <button className="client-cart-pix-copy" onClick={copyPix} type="button">
-                    <code>{pixPayload}</code>
-                    <span>
-                      <VendorIcon name={pixCopied ? "check" : "copy"} size={16} />
-                      {pixCopied ? "Copiado" : "Copiar"}
-                    </span>
-                  </button>
-                  <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
-                    <input
-                      accept="image/jpeg,image/png,image/webp,application/pdf"
-                      onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-                      ref={fileInputRef}
-                      style={{ display: "none" }}
-                      type="file"
-                    />
-                    <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
-                    <span>
-                      {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
-                    </span>
-                  </label>
-                  <p className="client-cart-pix-hint">
-                    Você também pode enviar o comprovante pelo WhatsApp depois de pagar.
-                  </p>
-                </div>
+                <ClientPixPaymentBlock
+                  amount={total}
+                  receiptControl={
+                    <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
+                      <input
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+                        ref={fileInputRef}
+                        style={{ display: "none" }}
+                        type="file"
+                      />
+                      <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
+                      <span>
+                        {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
+                      </span>
+                    </label>
+                  }
+                  store={store}
+                />
               )}
 
               {paymentMethod === "cash" && (

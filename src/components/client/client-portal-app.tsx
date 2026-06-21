@@ -42,7 +42,8 @@ export function ClientPortalApp({
   initialOrders,
   initialSales,
   products,
-  store
+  store,
+  customerStoreCount = 1
 }: {
   initialCustomer: PortalCustomer | null;
   initialInstallments: PortalInstallment[];
@@ -50,6 +51,7 @@ export function ClientPortalApp({
   initialSales: PortalSaleSummary[];
   products: PublicProduct[];
   store: PublicStore;
+  customerStoreCount?: number;
 }) {
   const [customer, setCustomer] = useState<ClientSessionCustomer | null>(initialCustomer);
   const [isDemo, setIsDemo] = useState(false);
@@ -81,6 +83,10 @@ export function ClientPortalApp({
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(null), 2400);
+  };
+
+  const switchStore = () => {
+    router.push("/app?mode=client&step=stores");
   };
 
   const openConfirmSale = (saleId: string) => {
@@ -142,6 +148,7 @@ export function ClientPortalApp({
               setTab("orders");
               router.refresh();
             }}
+            onSwitchStore={customer && customerStoreCount > 1 ? switchStore : undefined}
             products={products}
             store={store}
           />
@@ -198,6 +205,7 @@ export function ClientPortalApp({
           }}
           onToast={showToast}
           owedAmount={owedAmount}
+          onSwitchStore={customer && customerStoreCount > 1 ? switchStore : undefined}
           store={store}
         />
       ) : null}

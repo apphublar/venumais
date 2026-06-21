@@ -523,3 +523,103 @@ button, input { font: inherit; }
   font-size: 0.8rem;
   line-height: 1.45;
 }
+
+.client-store-picker-hero {
+  position: relative;
+  padding: 44px 24px 26px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(135deg, #15a06a, #0d7a50);
+  border-radius: 0 0 32px 32px;
+}
+
+.client-store-picker-hero h1 {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.client-store-picker-hero p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  opacity: 0.92;
+}
+
+.client-store-picker-body {
+  flex: 1;
+  padding: 18px 16px 28px;
+}
+
+.client-store-picker-search {
+  margin-top: 0;
+  background: #fff;
+  border: 1px solid #e8edea;
+}
+
+.client-store-picker-search input {
+  color: #112019;
+}
+
+.client-store-picker-search input::placeholder {
+  color: #9aa8a1;
+}
+
+.client-store-picker-search button {
+  background: #eef3f0;
+  color: #5f6f67;
+}
+
+.client-store-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.client-store-picker-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #e8edea;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(16, 32, 25, 0.04);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-store-picker-card-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.client-store-picker-card-copy strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #112019;
+}
+
+.client-store-picker-card-copy span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #7c8a83;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-store-picker-empty {
+  margin: 24px 8px 0;
+  text-align: center;
+  color: #7c8a83;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}

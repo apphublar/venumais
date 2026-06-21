@@ -9,7 +9,10 @@ export function buildPixPayload({
   receiverName?: string | null;
   storeName: string;
 }) {
-  const key = pixKey?.trim() || "CHAVE-PIX-DA-LOJA";
+  const key = pixKey?.trim();
+  if (!key) {
+    return "";
+  }
   const receiver = (receiverName || storeName).slice(0, 21).toUpperCase();
   const value = amount.toFixed(2);
 
