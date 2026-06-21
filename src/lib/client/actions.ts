@@ -87,6 +87,14 @@ function clientAuthError(message: string) {
     return "Conta sem cadastro nesta loja. Crie sua conta primeiro.";
   }
 
+  if (normalized.includes("pagamentos em aberto") || normalized.includes("quite suas parcelas")) {
+    return message;
+  }
+
+  if (normalized.includes("descreva o que precisa alterar")) {
+    return "Descreva o que precisa alterar.";
+  }
+
   if (process.env.NODE_ENV === "development") {
     return message;
   }
@@ -792,6 +800,7 @@ export async function updateClientProfileAction(
 }
 
 export async function updateClientPasswordAction(input: {
+  storeId: string;
   storeSlug: string;
   currentPassword: string;
   newPassword: string;
@@ -814,6 +823,20 @@ export async function updateClientPasswordAction(input: {
   }
 
   const supabase = await getSupabaseServerClient();
+  const { data: hasOpenDebt, error: debtError } = await supabase.rpc("customer_portal_has_open_debt", {
+    p_store_id: input.storeId
+  });
+
+  if (debtError) {
+    return { error: clientAuthError(debtError.message) };
+  }
+
+  if (hasOpenDebt) {
+    return {
+      error: "Você possui pagamentos em aberto. Solicite a alteração pelo suporte da loja."
+    };
+  }
+
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -923,5 +946,48 @@ export async function requestClientAccountDeletionAction(input: {
   }
 
   revalidatePath(`/loja/${input.storeSlug}`);
+  return {};
+}
+
+export async function deleteClientPortalAccessAction(input: {
+  storeId: string;
+  storeSlug: string;
+}): Promise<{ error?: string }> {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("delete_customer_portal_access_for_portal", {
+    p_store_id: input.storeId
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  revalidatePath(`/loja/${input.storeSlug}`);
+  return {};
+}
+
+export type ClientAccountChangeRequestType = "profile" | "password" | "deletion" | "support";
+
+export async function requestClientAccountChangeAction(input: {
+  storeId: string;
+  storeSlug: string;
+  requestType: ClientAccountChangeRequestType;
+  message?: string;
+  payload?: Record<string, unknown>;
+}): Promise<{ error?: string }> {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("request_customer_account_change_for_portal", {
+    p_store_id: input.storeId,
+    p_request_type: input.requestType,
+    p_message: input.message?.trim() || null,
+    p_payload: input.payload ?? null
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  revalidatePath(`/loja/${input.storeSlug}`);
+  revalidatePath("/painel/clientes");
   return {};
 }

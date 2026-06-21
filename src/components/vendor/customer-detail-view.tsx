@@ -15,6 +15,10 @@ import {
   formatShortDate,
   getInstallmentStatus
 } from "@/lib/sales/format";
+import {
+  getAccountChangeRequestLabel,
+  type CustomerAccountChangeRequest
+} from "@/lib/customers/account-requests";
 import type { Customer } from "@/lib/database/types";
 import type { SaleWithRelations } from "@/lib/sales/types";
 
@@ -25,11 +29,13 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 export function CustomerDetailView({
+  accountChangeRequests = [],
   customer,
   deleteAction,
   paymentSummary,
   sales
 }: {
+  accountChangeRequests?: CustomerAccountChangeRequest[];
   customer: Customer;
   deleteAction: () => Promise<void>;
   paymentSummary: {
@@ -167,6 +173,26 @@ export function CustomerDetailView({
           <p>Quando você registrar vendas, o histórico aparecerá aqui.</p>
         </VendorCard>
       )}
+
+      {accountChangeRequests.length ? (
+        <>
+          <VendorSectionLabel>Solicitações do portal</VendorSectionLabel>
+          {accountChangeRequests.map((request) => (
+            <VendorCard className="vendor-customer-request-card" key={request.id}>
+              <strong>{getAccountChangeRequestLabel(request.request_type)}</strong>
+              {request.message ? <p>{request.message}</p> : null}
+              <span>
+                {new Date(request.requested_at).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })}
+              </span>
+            </VendorCard>
+          ))}
+        </>
+      ) : null}
 
       <VendorSectionLabel>Zona de risco</VendorSectionLabel>
       {!deleteConfirm ? (

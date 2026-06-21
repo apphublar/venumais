@@ -12,6 +12,7 @@ import {
 } from "@/lib/customers/actions";
 import { normalizePhone } from "@/lib/customers/format";
 import { getStoreCustomer } from "@/lib/customers/queries";
+import { listCustomerAccountChangeRequests } from "@/lib/customers/account-requests";
 import { getCustomerPaymentSummary, listCustomerSales } from "@/lib/sales/queries";
 import { requireStoreAccess } from "@/lib/auth/session";
 
@@ -40,9 +41,10 @@ export default async function ClienteDetalhePage({
     await deleteCustomerAction(customerId);
   }
 
-  const [paymentSummary, sales] = await Promise.all([
+  const [paymentSummary, sales, accountChangeRequests] = await Promise.all([
     getCustomerPaymentSummary(store.id, customer.id),
-    listCustomerSales(store.id, customer.id)
+    listCustomerSales(store.id, customer.id),
+    listCustomerAccountChangeRequests(store.id, customer.id)
   ]);
 
   const updateAction = updateCustomerAction.bind(null, customer.id);
@@ -80,6 +82,7 @@ export default async function ClienteDetalhePage({
       ) : null}
 
       <CustomerDetailView
+        accountChangeRequests={accountChangeRequests}
         customer={customer}
         deleteAction={deleteCustomer}
         paymentSummary={paymentSummary}

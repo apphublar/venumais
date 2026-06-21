@@ -1415,6 +1415,10 @@
   margin: 14px 0 10px;
 }
 
+.client-conta-body {
+  padding-top: 6px;
+}
+
 .client-conta-profile {
   display: flex;
   align-items: center;
@@ -1513,12 +1517,15 @@
 }
 
 .client-conta-alert {
-  display: grid;
-  gap: 12px;
   margin-bottom: 16px;
   padding: 14px;
   background: #fff6f6;
   border-color: #fbd5d5;
+}
+
+.client-conta-alert-main {
+  display: flex;
+  gap: 11px;
 }
 
 .client-conta-alert-icon {
@@ -1529,6 +1536,7 @@
   border-radius: 12px;
   background: #fee2e2;
   color: #dc2626;
+  flex-shrink: 0;
 }
 
 .client-conta-alert strong {
@@ -1548,6 +1556,28 @@
 .client-conta-alert-actions {
   display: flex;
   gap: 9px;
+  margin-top: 12px;
+}
+
+.client-conta-support-request {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #fbd5d5;
+}
+
+.client-conta-support-request textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--client-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--client-ink-1);
+  font-family: inherit;
+  font-size: 0.84rem;
+  resize: vertical;
+  outline: none;
 }
 
 .client-conta-edit-toggle {
