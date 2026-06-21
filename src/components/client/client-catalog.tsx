@@ -210,6 +210,7 @@ export function ClientCatalog({
       {cartOpen ? (
         <ClientCartSheet
           cart={cart}
+          customer={customer}
           customerId={isDemo ? null : customer?.id ?? null}
           onClose={() => setCartOpen(false)}
           onSubmitted={onOrderSubmitted}

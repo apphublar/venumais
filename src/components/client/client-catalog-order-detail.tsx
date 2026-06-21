@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
+import { buildPixPayload } from "@/lib/pix/build-pix-code";
 import { formatBRL } from "@/lib/products/format";
 import {
   getPortalOrderDetailForViewAction,
@@ -11,8 +13,7 @@ import {
   type OrderDetailView
 } from "@/lib/client/actions";
 import { getOrderStatusMeta, isQuoteAnswered } from "@/lib/client/order-status";
-import type { PortalOrder } from "@/lib/client/queries";
-import type { PublicStore } from "@/lib/client/queries";
+import type { PortalOrder, PublicProduct, PublicStore } from "@/lib/client/queries";
 
 type PaymentMethod = "pix" | "cash" | "card";
 
@@ -43,6 +44,7 @@ function PedidoStatusBadge({ status }: { status: string }) {
 
 export function ClientCatalogOrderDetail({
   order: initialOrder,
+  products,
   storeId,
   storeSlug,
   store,
@@ -50,6 +52,7 @@ export function ClientCatalogOrderDetail({
   onRefresh
 }: {
   order: PortalOrder;
+  products: PublicProduct[];
   storeId: string;
   storeSlug: string;
   store: PublicStore;
@@ -84,13 +87,26 @@ export function ClientCatalogOrderDetail({
   const total = order?.total_amount ?? initialOrder.total_amount ?? 0;
   const paymentInformed = order?.payment_informed ?? initialOrder.payment_informed ?? false;
 
+  const pixPayload = useMemo(
+    () =>
+      buildPixPayload({
+        amount: total,
+        pixKey: store.pix_key,
+        receiverName: store.pix_receiver_name,
+        storeName: store.name
+      }),
+    [total, store.pix_key, store.pix_receiver_name, store.name]
+  );
+
   const copyPix = () => {
-    const key = store.pix_key ?? "";
-    if (key) {
-      navigator.clipboard.writeText(key).catch(() => {});
-      setPixCopied(true);
-      setTimeout(() => setPixCopied(false), 2500);
-    }
+    navigator.clipboard.writeText(pixPayload).catch(() => {});
+    setPixCopied(true);
+    setTimeout(() => setPixCopied(false), 1800);
+  };
+
+  const getItemProduct = (productId: string | null) => {
+    if (!productId) return null;
+    return products.find((product) => product.id === productId) ?? null;
   };
 
   const handleInformPayment = () => {
@@ -168,17 +184,18 @@ export function ClientCatalogOrderDetail({
 
   const pixBlock = (
     <div>
-      <div
+      <button
         className="client-cart-pix-copy"
         onClick={copyPix}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && copyPix()}
-        style={{ marginBottom: 10 }}
+        style={{ marginBottom: 10, width: "100%" }}
+        type="button"
       >
-        <code>{store.pix_key ?? "—"}</code>
-        <span>{pixCopied ? "Copiado ✓" : "Copiar chave"}</span>
-      </div>
+        <code>{pixPayload}</code>
+        <span>
+          <VendorIcon name={pixCopied ? "check" : "copy"} size={16} />
+          {pixCopied ? "Copiado" : "Copiar"}
+        </span>
+      </button>
       <label className="client-pay-receipt" style={{ cursor: "pointer" }}>
         <VendorIcon name={receiptFile ? "check-circle" : "attach"} size={18} />
         <span style={{ flex: 1 }}>
@@ -252,37 +269,35 @@ export function ClientCatalogOrderDetail({
             {/* ── Itens ── */}
             <p className="vendor-section-label" style={{ marginBottom: 8 }}>ITENS</p>
 
-            {(order?.items ?? []).map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "10px 14px",
-                  background: "var(--client-bg-2)",
-                  borderRadius: 12,
-                  marginBottom: 8
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {item.product_name}
+            {(order?.items ?? []).map((item) => {
+              const product = getItemProduct(item.product_id);
+              return (
+                <div className="client-order-detail-item" key={item.id}>
+                  <ProductThumb
+                    product={{
+                      name: item.product_name,
+                      thumb_color: product?.thumb_color ?? "#11885b",
+                      image_url: product?.image_url ?? null
+                    }}
+                    size={46}
+                  />
+                  <div className="client-order-detail-item-copy">
+                    <strong>{item.product_name}</strong>
+                    <span>
+                      Qtd {item.quantity}
+                      {item.unit_price != null ? ` · ${formatBRL(item.unit_price)}` : ""}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--client-ink-3)", fontWeight: 700, marginTop: 2 }}>
-                    Qtd {item.quantity}
-                    {item.unit_price != null ? ` · ${formatBRL(item.unit_price)}` : ""}
-                  </div>
+                  {item.unit_price != null ? (
+                    <strong className="client-order-detail-item-price">
+                      {formatBRL(item.unit_price * item.quantity)}
+                    </strong>
+                  ) : (
+                    <span className="client-order-detail-item-pending">a definir</span>
+                  )}
                 </div>
-                {item.unit_price != null ? (
-                  <strong style={{ fontSize: 14, color: "var(--client-ink-1)" }}>
-                    {formatBRL(item.unit_price * item.quantity)}
-                  </strong>
-                ) : (
-                  <span style={{ fontSize: 12, color: "#b45309", fontWeight: 700 }}>a definir</span>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             <div
               style={{
@@ -389,16 +404,18 @@ export function ClientCatalogOrderDetail({
                 <div className="client-cart-pgto-options" style={{ marginBottom: 14 }}>
                   {(
                     [
-                      ["pix", "PIX", "pix", "#16a34a"],
-                      ["cash", "Dinheiro", "wallet", "#ea580c"],
-                      ["card", "Cartão", "cards", "#6d28d9"]
+                      ["pix", "PIX", "pix"],
+                      ["cash", "Dinheiro", "wallet"],
+                      ["card", "Cartão", "cards"]
                     ] as const
-                  ).map(([key, label, icon, color]) => (
+                  ).map(([key, label, icon]) => (
                     <button
                       className={`client-cart-pgto-btn${pgto === key ? " is-active" : ""}`}
                       key={key}
-                      onClick={() => { setPgto(key); setReceiptFile(null); }}
-                      style={pgto === key ? { borderColor: color, color } : undefined}
+                      onClick={() => {
+                        setPgto(key);
+                        setReceiptFile(null);
+                      }}
                       type="button"
                     >
                       <VendorIcon name={icon} size={20} />
@@ -409,7 +426,8 @@ export function ClientCatalogOrderDetail({
                 {pgto === "pix" && pixBlock}
                 {pgto === "cash" && (
                   <p className="client-cart-pix-hint">
-                    A loja vai combinar o pagamento em dinheiro com você.
+                    A loja vai combinar o pagamento com você{" "}
+                    {initialOrder.delivery_type === "delivery" ? "na entrega" : "na retirada"}.
                   </p>
                 )}
                 {pgto === "card" && (

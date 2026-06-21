@@ -1,17 +1,37 @@
 "use client";
 
-import { useRef, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
+import type { ClientSessionCustomer } from "@/lib/client/actions";
 import { checkoutClientOrderAction } from "@/lib/client/actions";
+import { buildPixPayload } from "@/lib/pix/build-pix-code";
 import { formatBRL, getEffectivePrice } from "@/lib/products/format";
+import { couponDiscount } from "@/lib/sales/format";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PublicProduct, PublicStore } from "@/lib/client/queries";
 
 type DeliveryType = "pickup" | "delivery";
 type PaymentMethod = "pix" | "cash" | "card";
 
+type ValidatedCoupon = {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+};
+
+function hasCustomerAddress(customer: ClientSessionCustomer | null) {
+  if (!customer) return false;
+  return Boolean(
+    customer.address_street?.trim() ||
+      customer.address_number?.trim() ||
+      customer.address_city?.trim()
+  );
+}
+
 export function ClientCartSheet({
   cart,
+  customer,
   customerId,
   onClose,
   onSubmitted,
@@ -20,6 +40,7 @@ export function ClientCartSheet({
   store
 }: {
   cart: Record<string, number>;
+  customer: ClientSessionCustomer | null;
   customerId: string | null;
   onClose: () => void;
   onSubmitted: (message: string) => void;
@@ -31,7 +52,9 @@ export function ClientCartSheet({
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("pickup");
   const [notes, setNotes] = useState("");
   const [couponCode, setCouponCode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [validatedCoupon, setValidatedCoupon] = useState<ValidatedCoupon | null>(null);
+  const [couponPending, setCouponPending] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +83,50 @@ export function ClientCartSheet({
     [items]
   );
 
+  const discount = hasVisiblePrices ? couponDiscount(validatedCoupon, subtotal) : 0;
+  const total = subtotal - discount;
+
+  const pixPayload = useMemo(
+    () =>
+      buildPixPayload({
+        amount: total,
+        pixKey: store.pix_key,
+        receiverName: store.pix_receiver_name,
+        storeName: store.name
+      }),
+    [total, store.pix_key, store.pix_receiver_name, store.name]
+  );
+
+  useEffect(() => {
+    if (!couponCode.trim()) {
+      setValidatedCoupon(null);
+      setCouponPending(false);
+      return;
+    }
+
+    setCouponPending(true);
+    const timer = window.setTimeout(async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase.rpc("validate_store_coupon", {
+        p_store_id: store.id,
+        p_code: couponCode.trim()
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      setValidatedCoupon(
+        row
+          ? {
+              code: String(row.code),
+              type: row.type as ValidatedCoupon["type"],
+              value: Number(row.value)
+            }
+          : null
+      );
+      setCouponPending(false);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [couponCode, store.id]);
+
   const removeItem = (productId: string) => {
     const next = { ...cart };
     delete next[productId];
@@ -67,11 +134,9 @@ export function ClientCartSheet({
   };
 
   const copyPix = () => {
-    if (store.pix_key) {
-      navigator.clipboard.writeText(store.pix_key).catch(() => {});
-      setPixCopied(true);
-      setTimeout(() => setPixCopied(false), 2500);
-    }
+    navigator.clipboard.writeText(pixPayload).catch(() => {});
+    setPixCopied(true);
+    setTimeout(() => setPixCopied(false), 1800);
   };
 
   const handleContinue = () => {
@@ -86,6 +151,7 @@ export function ClientCartSheet({
       return;
     }
 
+    setPaymentMethod("pix");
     setStep("payment");
   };
 
@@ -97,7 +163,7 @@ export function ClientCartSheet({
       fd.append("storeSlug", store.slug);
       fd.append("deliveryType", deliveryType);
       fd.append("notes", notes);
-      fd.append("couponCode", couponCode.trim());
+      fd.append("couponCode", validatedCoupon ? validatedCoupon.code : couponCode.trim());
       fd.append("isQuote", hasVisiblePrices ? "false" : "true");
       fd.append(
         "items",
@@ -129,8 +195,6 @@ export function ClientCartSheet({
     });
   };
 
-  const canFinalize = paymentMethod !== null;
-
   return (
     <div className="vendor-sheet-backdrop" onClick={onClose} role="presentation">
       <div
@@ -142,13 +206,15 @@ export function ClientCartSheet({
       >
         <div className="vendor-sheet-handle" />
 
-        {/* ─── Header ─── */}
         <div className="vendor-sheet-header">
           {step === "payment" ? (
             <button
               aria-label="Voltar"
               className="vendor-dashboard-icon-btn"
-              onClick={() => { setStep("cart"); setError(null); }}
+              onClick={() => {
+                setStep("cart");
+                setError(null);
+              }}
               type="button"
             >
               <VendorIcon name="arrow-left" size={18} />
@@ -165,7 +231,6 @@ export function ClientCartSheet({
         <div className="vendor-sheet-body">
           {step === "cart" ? (
             <>
-              {/* ─── Itens ─── */}
               {items.map(({ product, quantity }) => {
                 const price = getEffectivePrice({ price: product.price, promo_price: product.promo_price });
                 return (
@@ -192,45 +257,81 @@ export function ClientCartSheet({
                 );
               })}
 
-              {/* ─── Entrega / Retirada ─── */}
+              <p className="client-cart-section-label">Como você quer receber?</p>
               <div className="client-cart-delivery">
                 {(
                   [
-                    ["pickup", "Retirada", "store"],
-                    ["delivery", "Entrega", "truck"]
+                    ["pickup", "Retirada", "store", "Retiro na loja"],
+                    ["delivery", "Entrega", "truck", "Entregar no endereço"]
                   ] as const
-                ).map(([key, label, icon]) => (
+                ).map(([key, label, icon, subtitle]) => (
                   <button
-                    className={deliveryType === key ? "is-active" : ""}
+                    className={`client-cart-delivery-btn${deliveryType === key ? " is-active" : ""}`}
                     key={key}
                     onClick={() => setDeliveryType(key)}
                     type="button"
                   >
-                    <VendorIcon name={icon} size={16} /> {label}
+                    <VendorIcon name={icon} size={20} />
+                    <span className="client-cart-delivery-label">{label}</span>
+                    <span className="client-cart-delivery-sub">{subtitle}</span>
                   </button>
                 ))}
               </div>
 
-              {/* ─── Cupom (só se todos têm preço) ─── */}
-              {hasVisiblePrices ? (
-                <label className="client-cart-coupon">
-                  <input
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                    placeholder="Cupom de desconto"
-                    value={couponCode}
-                  />
-                </label>
+              {deliveryType === "delivery" && customer && !hasCustomerAddress(customer) ? (
+                <p className="client-cart-address-warning">
+                  Você ainda não cadastrou endereço. A loja vai te pedir o endereço para despachar.
+                </p>
               ) : null}
 
-              {/* ─── Total ─── */}
-              <div className="client-cart-total">
-                <span>{hasVisiblePrices ? "Total" : "Total parcial"}</span>
-                <strong>{formatBRL(subtotal)}</strong>
+              {hasVisiblePrices ? (
+                <div className="client-cart-coupon-block">
+                  <div className="client-cart-coupon-row">
+                    <input
+                      className={
+                        couponCode && !validatedCoupon
+                          ? "client-cart-coupon-input client-cart-coupon-input-invalid"
+                          : "client-cart-coupon-input"
+                      }
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                      placeholder="Cupom de desconto"
+                      value={couponCode}
+                    />
+                    {validatedCoupon ? (
+                      <span className="client-cart-coupon-applied">
+                        <VendorIcon name="check" size={14} /> aplicado
+                      </span>
+                    ) : null}
+                  </div>
+                  {couponCode && !validatedCoupon && !couponPending ? (
+                    <p className="client-cart-coupon-error">Cupom inválido ou inativo.</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="client-cart-totals">
+                {discount > 0 && validatedCoupon ? (
+                  <>
+                    <div className="client-cart-total-line">
+                      <span>Subtotal</span>
+                      <strong>{formatBRL(subtotal)}</strong>
+                    </div>
+                    <div className="client-cart-total-line client-cart-total-line-discount">
+                      <span>Cupom {validatedCoupon.code}</span>
+                      <strong>− {formatBRL(discount)}</strong>
+                    </div>
+                  </>
+                ) : null}
+                <div className="client-cart-total">
+                  <span>{hasVisiblePrices ? "Total" : "Total parcial"}</span>
+                  <strong>{formatBRL(hasVisiblePrices ? total : subtotal)}</strong>
+                </div>
               </div>
 
               {!hasVisiblePrices ? (
                 <p className="client-cart-quote-note">
-                  Alguns itens são sob orçamento. A loja vai confirmar os valores e te enviar o total.
+                  Alguns itens são sob orçamento. A loja vai confirmar os valores e te enviar o total — depois você
+                  escolhe como pagar.
                 </p>
               ) : null}
 
@@ -259,22 +360,34 @@ export function ClientCartSheet({
             </>
           ) : (
             <>
-              {/* ─── Passo 2: Pagamento ─── */}
-              <p className="client-cart-section-label">FORMA DE PAGAMENTO</p>
+              <button
+                className="client-cart-back-link"
+                onClick={() => {
+                  setStep("cart");
+                  setError(null);
+                }}
+                type="button"
+              >
+                <VendorIcon name="chevL" size={16} /> Voltar ao carrinho
+              </button>
+
+              <p className="client-cart-section-label client-cart-section-label-normal">Forma de pagamento</p>
 
               <div className="client-cart-pgto-options">
                 {(
                   [
-                    ["pix", "PIX", "pix", "#16a34a"],
-                    ["cash", "Dinheiro", "wallet", "#ea580c"],
-                    ["card", "Cartão", "cards", "#6d28d9"]
+                    ["pix", "PIX", "pix"],
+                    ["cash", "Dinheiro", "wallet"],
+                    ["card", "Cartão", "cards"]
                   ] as const
-                ).map(([key, label, icon, color]) => (
+                ).map(([key, label, icon]) => (
                   <button
                     className={`client-cart-pgto-btn${paymentMethod === key ? " is-active" : ""}`}
                     key={key}
-                    onClick={() => { setPaymentMethod(key); setReceiptFile(null); }}
-                    style={paymentMethod === key ? { borderColor: color, color } : undefined}
+                    onClick={() => {
+                      setPaymentMethod(key);
+                      setReceiptFile(null);
+                    }}
                     type="button"
                   >
                     <VendorIcon name={icon} size={22} />
@@ -283,33 +396,28 @@ export function ClientCartSheet({
                 ))}
               </div>
 
-              {/* ─── PIX ─── */}
               {paymentMethod === "pix" && (
                 <div className="client-pay-pix-box">
-                  <div className="client-cart-pix-header">
-                    <strong>Chave PIX</strong>
+                  <div className="client-pay-pix-amount-card">
+                    <span>Pague com PIX</span>
+                    <strong>{formatBRL(total)}</strong>
                     {store.pix_receiver_name ? (
-                      <span>Para: {store.pix_receiver_name}</span>
-                    ) : null}
+                      <small>para {store.pix_receiver_name}</small>
+                    ) : (
+                      <small>para {store.name}</small>
+                    )}
                   </div>
-                  <div className="client-pay-amount-card" style={{ marginTop: 8 }}>
-                    <span>Total a pagar</span>
-                    <strong>{formatBRL(subtotal)}</strong>
-                  </div>
-                  {store.pix_key ? (
-                    <button className="client-cart-pix-copy" onClick={copyPix} type="button">
-                      <code>{store.pix_key}</code>
-                      <span>{pixCopied ? "Copiado ✓" : "Copiar chave"}</span>
-                    </button>
-                  ) : (
-                    <p className="client-cart-pix-hint">Chave PIX não configurada pela loja.</p>
-                  )}
+                  <button className="client-cart-pix-copy" onClick={copyPix} type="button">
+                    <code>{pixPayload}</code>
+                    <span>
+                      <VendorIcon name={pixCopied ? "check" : "copy"} size={16} />
+                      {pixCopied ? "Copiado" : "Copiar"}
+                    </span>
+                  </button>
                   <label className="client-pay-receipt">
                     <VendorIcon name={receiptFile ? "check-circle" : "attach"} size={18} />
                     <span>
-                      {receiptFile
-                        ? receiptFile.name
-                        : "Anexar comprovante (opcional)"}
+                      {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
                     </span>
                     <input
                       accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -327,45 +435,48 @@ export function ClientCartSheet({
                     </button>
                   </label>
                   <p className="client-cart-pix-hint">
-                    Você pode enviar o comprovante pelo WhatsApp depois, se preferir.
+                    Você também pode enviar o comprovante pelo WhatsApp depois de pagar.
                   </p>
                 </div>
               )}
 
-              {/* ─── Dinheiro ─── */}
               {paymentMethod === "cash" && (
                 <div className="client-cart-pgto-detail">
                   <div className="client-cart-pgto-icon" style={{ background: "#fff7ed" }}>
                     <VendorIcon name="wallet" size={32} style={{ color: "#ea580c" }} />
                   </div>
                   <strong>Pagamento em dinheiro</strong>
-                  <span>Combine o valor e a forma de entrega diretamente com a loja.</span>
+                  <span>
+                    A loja vai combinar o pagamento com você{" "}
+                    {deliveryType === "delivery" ? "na entrega" : "na retirada"}.
+                  </span>
                 </div>
               )}
 
-              {/* ─── Cartão ─── */}
               {paymentMethod === "card" && (
                 <div className="client-cart-pgto-detail">
                   <div className="client-cart-pgto-icon" style={{ background: "#ede9fe" }}>
                     <VendorIcon name="cards" size={32} style={{ color: "#6d28d9" }} />
                   </div>
-                  <strong>Pagamento com cartão</strong>
-                  <span>A loja vai gerar um link de pagamento e enviar para você confirmar.</span>
+                  <strong>Pagamento no cartão</strong>
+                  <span>
+                    A loja vai gerar um link de pagamento. Você receberá um botão &quot;Pagar com cartão&quot; aqui no
+                    app.
+                  </span>
                 </div>
               )}
 
-              {/* ─── Total ─── */}
               <div className="client-cart-total" style={{ marginTop: 12 }}>
                 <span>Total</span>
-                <strong>{formatBRL(subtotal)}</strong>
+                <strong>{formatBRL(total)}</strong>
               </div>
 
               {error ? <p className="client-auth-error">{error}</p> : null}
 
               <button
                 className="vendor-button vendor-button-primary"
-                disabled={pending || !canFinalize}
-                onClick={() => canFinalize && submitOrder(paymentMethod)}
+                disabled={pending}
+                onClick={() => submitOrder(paymentMethod)}
                 type="button"
               >
                 <VendorIcon name="check-circle" size={18} />

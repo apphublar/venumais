@@ -15,7 +15,7 @@ export const ORDER_STATUS_META: Record<string, OrderStatusMeta> = {
   awaiting_payment: { label: "Em aberto",             bg: "#dbeafe", fg: "#1e478f", dot: "#2563eb" },
   awaiting_card:    { label: "Aguardando cartão",     bg: "#ede9fe", fg: "#6d28d9", dot: "#7c3aed" },
   cash_on_delivery: { label: "A combinar (dinheiro)", bg: "#fff7ed", fg: "#b45309", dot: "#ea580c" },
-  paid:             { label: "Pago",                  bg: "#dcfce7", fg: "#15803d", dot: "#16a34a" },
+  paid:             { label: "Pago",                  bg: "var(--green-50)", fg: "var(--green-700)", dot: "#16a34a" },
   cancelled:        { label: "Cancelado",             bg: "#fee2e2", fg: "#b1182a", dot: "#dc2626" },
   // ── Legados (backward compat) ────────────────────────────────────────────────
   new:              { label: "Em aberto",             bg: "#dbeafe", fg: "#1e478f", dot: "#2563eb" },

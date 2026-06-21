@@ -71,35 +71,35 @@ export function ClientPedidos({
   );
   const paidSales = useMemo(() => sales.filter((s) => s.open_amount <= 0.001), [sales]);
 
-  // ── Categorias de pedidos ───────────────────────────────────────────────────
-  const quoteOrders = orders.filter((o) =>
-    ["quote", "new"].includes(o.status)
+  // ── Categorias de pedidos (protótipo) ───────────────────────────────────────
+  const quoteOrders = orders.filter((o) => o.status === "quote");
+  const pedidosCat = orders.filter((o) =>
+    [
+      "new",
+      "quote_answered",
+      "quoted",
+      "awaiting_payment",
+      "awaiting_card",
+      "cash_on_delivery",
+      "payment_review"
+    ].includes(o.status)
   );
-  const quoteAnsweredOrders = orders.filter((o) =>
-    ["quote_answered", "quoted"].includes(o.status)
-  );
-  const awaitingOrders = orders.filter((o) =>
-    ["awaiting_payment", "awaiting_card", "cash_on_delivery", "payment_review"].includes(o.status)
-  );
-  const confirmedOrders = orders.filter((o) =>
+  const pedidosPagos = orders.filter((o) =>
     ["paid", "delivering", "delivered"].includes(o.status)
   );
 
-  const allOrcamento = [...quoteOrders, ...quoteAnsweredOrders];
-
   const counts = {
     todos: orders.length + sales.length,
-    orcamento: allOrcamento.length,
-    aberto:
-      openSales.length + pendingConfirmation.length + awaitingOrders.length,
-    quitado: paidSales.length + confirmedOrders.length
+    orcamento: quoteOrders.length,
+    aberto: pedidosCat.length + openSales.length + pendingConfirmation.length,
+    quitado: pedidosPagos.length + paidSales.length
   };
 
   const tabs: Array<[OrderFilter, string]> = [
     ["todos", "Todos"],
     ["orcamento", "Orçamentos"],
     ["aberto", "Em aberto"],
-    ["quitado", "Quitados"]
+    ["quitado", "Pagos"]
   ];
 
   const show = (key: OrderFilter) => filter === "todos" || filter === key;
@@ -148,88 +148,50 @@ export function ClientPedidos({
     });
   };
 
-  // ── OrcamentoCard (âmbar) — pedido sem preço, aguardando loja ────────────────
-  const renderOrcamentoCard = (order: PortalOrder) => {
-    const needsAction = isQuoteAnswered(order.status);
-    return (
-      <div
-        className={`client-cat-order-card${needsAction ? " needs-action" : ""}`}
-        key={order.id}
-        onClick={() => handleOpenDetail(order)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(order)}
-      >
-        <div className={needsAction ? "client-cat-order-card-head" : "client-orcamento-card-head"}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="order-code">Pedido #{String(order.order_code).padStart(4, "0")}</div>
-            <div className="order-date">
-              {formatShortDate(order.created_at)} · {order.item_count}{" "}
-              {order.item_count === 1 ? "item" : "itens"}
-            </div>
+  // ── OrcamentoCard (âmbar) — aguardando loja precificar ───────────────────────
+  const renderOrcamentoCard = (order: PortalOrder) => (
+    <div className="client-orcamento-card" key={order.id}>
+      <div className="client-orcamento-card-head">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="order-code">Orçamento #{String(order.order_code).padStart(4, "0")}</div>
+          <div className="order-date">
+            {formatShortDate(order.created_at)} · {order.item_count}{" "}
+            {order.item_count === 1 ? "item" : "itens"}
+            {order.edited_at ? " · editado" : ""}
           </div>
-          {(() => {
-            const m = getOrderStatusMeta(order.status);
-            return (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  background: m.bg,
-                  color: m.fg,
-                  borderRadius: 999,
-                  padding: "3px 9px",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                  flexShrink: 0
-                }}
-              >
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: m.dot }} />
-                {m.label}
-              </span>
-            );
-          })()}
         </div>
-
-        {needsAction ? (
-          <div className="client-cat-order-action-hint">
-            <VendorIcon name="receipt" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
-            A loja enviou os valores — toque para fechar o pedido
-          </div>
-        ) : null}
-
-        {!needsAction ? (
-          <div
-            className="client-orcamento-card-foot"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="vendor-button vendor-button-ghost"
-              disabled={isLoadingOrder || isPendingAction}
-              onClick={(e) => { e.stopPropagation(); handleOpenEditor(order.id); }}
-              style={{ fontSize: "0.78rem", padding: "6px 12px" }}
-              type="button"
-            >
-              <VendorIcon name="edit" size={14} />
-              Editar
-            </button>
-            <button
-              className="vendor-button vendor-button-danger"
-              disabled={isPendingAction}
-              onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id); }}
-              style={{ fontSize: "0.78rem", padding: "6px 12px" }}
-              type="button"
-            >
-              <VendorIcon name="x" size={14} />
-              Excluir
-            </button>
-          </div>
-        ) : null}
+        <span className="client-orcamento-badge">Aguardando</span>
       </div>
-    );
-  };
+
+      <div className="client-orcamento-status-row">
+        <VendorIcon name="clock" size={15} />
+        <span>Aguardando valores da loja</span>
+      </div>
+
+      <div className="client-orcamento-card-foot">
+        <button
+          className="vendor-button vendor-button-ghost"
+          disabled={isLoadingOrder || isPendingAction}
+          onClick={() => handleOpenEditor(order.id)}
+          style={{ fontSize: "0.78rem", padding: "6px 12px", flex: 1 }}
+          type="button"
+        >
+          <VendorIcon name="edit" size={14} />
+          Editar
+        </button>
+        <button
+          className="vendor-button vendor-button-danger"
+          disabled={isPendingAction}
+          onClick={() => handleCancelOrder(order.id)}
+          style={{ fontSize: "0.78rem", padding: "6px 12px", flex: 1 }}
+          type="button"
+        >
+          <VendorIcon name="x" size={14} />
+          Excluir
+        </button>
+      </div>
+    </div>
+  );
 
   // ── PedidoCatCard — pedido finalizado com pagamento ──────────────────────────
   const renderCatOrderCard = (order: PortalOrder) => {
@@ -274,15 +236,20 @@ export function ClientPedidos({
           </span>
         </div>
 
-        {needsAction && order.status === "awaiting_payment" && payMethod === "pix" ? (
+        {needsAction && isQuoteAnswered(order.status) ? (
           <div className="client-cat-order-action-hint">
-            <VendorIcon name="pix" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
-            Pague via PIX e toque aqui para informar
+            <VendorIcon name="chevR" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            Toque para fechar ou recusar
           </div>
-        ) : needsAction && order.status === "awaiting_card" ? (
+        ) : needsAction && order.status === "awaiting_card" && !order.payment_informed ? (
           <div className="client-cat-order-action-hint">
-            <VendorIcon name="cards" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
-            Link de pagamento disponível — toque para pagar
+            <VendorIcon name="chevR" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            Toque para pagar
+          </div>
+        ) : needsAction && order.status === "awaiting_payment" && payMethod === "pix" ? (
+          <div className="client-cat-order-action-hint">
+            <VendorIcon name="chevR" size={13} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            Toque para pagar
           </div>
         ) : null}
 
@@ -347,65 +314,47 @@ export function ClientPedidos({
         ) : null}
 
         {/* ── Orçamentos respondidos (destaque verde) ── */}
-        {show("orcamento") && quoteAnsweredOrders.length > 0 ? (
-          <>
-            <VendorSectionLabel>Orçamentos recebidos</VendorSectionLabel>
-            {quoteAnsweredOrders.map(renderOrcamentoCard)}
-          </>
-        ) : null}
-
-        {/* ── Orçamentos pendentes (âmbar) ── */}
         {show("orcamento") ? (
           <>
-            <VendorSectionLabel>Orçamentos enviados</VendorSectionLabel>
+            <VendorSectionLabel>Aguardando orçamento do vendedor</VendorSectionLabel>
             {quoteOrders.length ? (
               quoteOrders.map(renderOrcamentoCard)
-            ) : filter === "orcamento" && !quoteAnsweredOrders.length ? (
+            ) : filter === "orcamento" ? (
               empty("Nenhum orçamento pendente.")
             ) : null}
           </>
         ) : null}
 
-        {/* ── Pedidos em andamento (pagamentos) ── */}
-        {show("aberto") && awaitingOrders.length > 0 ? (
+        {show("aberto") && pedidosCat.length > 0 ? (
           <>
-            <VendorSectionLabel>Em andamento</VendorSectionLabel>
-            {awaitingOrders.map(renderCatOrderCard)}
+            <VendorSectionLabel>Pedidos do catálogo</VendorSectionLabel>
+            {pedidosCat.map(renderCatOrderCard)}
           </>
         ) : null}
 
-        {/* ── Compras da loja em aberto ── */}
         {show("aberto") ? (
           <>
-            <VendorSectionLabel>Em aberto</VendorSectionLabel>
+            <VendorSectionLabel>Compras em aberto</VendorSectionLabel>
             {openSales.length ? (
               openSales.map((sale) => (
                 <SaleCard key={sale.id} onOpen={() => onOpenSale(sale.id)} sale={sale} />
               ))
-            ) : filter === "aberto" && !pendingConfirmation.length && !awaitingOrders.length ? (
+            ) : filter === "aberto" && !pendingConfirmation.length && !pedidosCat.length ? (
               empty("Nenhuma compra em aberto.")
             ) : null}
           </>
         ) : null}
 
-        {/* ── Confirmados ── */}
-        {show("quitado") && confirmedOrders.length > 0 ? (
-          <>
-            <VendorSectionLabel>Confirmados</VendorSectionLabel>
-            {confirmedOrders.map(renderCatOrderCard)}
-          </>
-        ) : null}
-
-        {/* ── Quitados ── */}
         {show("quitado") ? (
           <>
-            <VendorSectionLabel>Quitados</VendorSectionLabel>
+            <VendorSectionLabel>Pagos</VendorSectionLabel>
+            {pedidosPagos.map(renderCatOrderCard)}
             {paidSales.length ? (
               paidSales.map((sale) => (
                 <SaleCard key={sale.id} onOpen={() => onOpenSale(sale.id)} sale={sale} />
               ))
-            ) : filter === "quitado" && !confirmedOrders.length ? (
-              empty("Nenhuma compra quitada ainda.")
+            ) : !pedidosPagos.length ? (
+              empty("Nenhuma compra paga ainda.")
             ) : null}
           </>
         ) : null}
@@ -419,6 +368,7 @@ export function ClientPedidos({
           onClose={() => setSelectedOrder(null)}
           onRefresh={() => router.refresh()}
           order={selectedOrder}
+          products={products}
           store={store}
           storeId={store.id}
           storeSlug={store.slug}

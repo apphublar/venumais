@@ -13,15 +13,17 @@ function orderHeaderTitle(order: Awaited<ReturnType<typeof getStoreOrder>>) {
     return "Pedido";
   }
 
+  const code = String(order.order_code).padStart(4, "0");
+
   if (order.order_type === "wholesale") {
-    return `Encomenda #${order.order_code}`;
+    return `Encomenda #${code}`;
   }
 
   if (order.status === "quoted" || order.status === "quote" || order.order_type === "quote") {
-    return `Orçamento #${order.order_code}`;
+    return `Orçamento #${code}`;
   }
 
-  return `Pedido #${order.order_code}`;
+  return `Pedido #${code}`;
 }
 
 export default async function PedidoDetalhePage({ params }: PedidoDetalhePageProps) {
@@ -37,7 +39,11 @@ export default async function PedidoDetalhePage({ params }: PedidoDetalhePagePro
     <>
       <VendorScreenHeader
         backHref="/painel/pedidos"
-        subtitle={`${order.customer.full_name} · ${new Date(order.created_at).toLocaleDateString("pt-BR")}`}
+        subtitle={`${order.customer.full_name} · ${new Date(order.created_at).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        })}`}
         title={orderHeaderTitle(order)}
       />
       <OrderDetailView order={order} storeId={store.id} />

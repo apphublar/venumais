@@ -6,7 +6,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export async function approveStoreOrderAction(
   storeId: string,
   orderId: string,
-  items: Array<{ id: string; unitPrice: number }>
+  items: Array<{ id: string; unitPrice: number }>,
+  vendorNote?: string
 ) {
   if (!items.length || items.some((item) => item.unitPrice <= 0)) {
     return { error: "Defina todos os preços para aprovar." };
@@ -24,6 +25,18 @@ export async function approveStoreOrderAction(
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (vendorNote?.trim()) {
+    const { error: noteError } = await supabase
+      .from("store_orders")
+      .update({ vendor_payment_message: vendorNote.trim() })
+      .eq("id", orderId)
+      .eq("store_id", storeId);
+
+    if (noteError) {
+      return { error: noteError.message };
+    }
   }
 
   revalidatePath("/painel/pedidos");
