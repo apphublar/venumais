@@ -74,7 +74,7 @@ export function ClientCatalog({
       <div className="client-hero">
         <div className="client-hero-top">
           <VendorBrandMark label={store.name} size={50} radius={15} />
-          <div>
+          <div className="client-hero-copy">
             <strong>{store.name}</strong>
             <span>{store.catalog_tagline}</span>
           </div>
@@ -85,20 +85,12 @@ export function ClientCatalog({
               onClick={onOpenAccount}
               type="button"
             >
-              <div
-                aria-hidden="true"
-                className="vendor-avatar"
-                style={{ width: 38, height: 38, background: customer.avatar_color }}
-              >
+              <div aria-hidden="true" className="vendor-avatar client-hero-avatar">
                 {customerInitial}
               </div>
             </button>
           ) : (
-            <div
-              aria-hidden="true"
-              className="vendor-avatar"
-              style={{ width: 38, height: 38, background: "rgba(255,255,255,0.22)" }}
-            >
+            <div aria-hidden="true" className="vendor-avatar client-hero-avatar">
               {customerInitial}
             </div>
           )}

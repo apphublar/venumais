@@ -241,7 +241,7 @@ export function ClientConta({
                 Ver parcelas
               </button>
               <button
-                className="vendor-button vendor-button-ghost"
+                className="vendor-button client-conta-whats-button"
                 onClick={() => setSupportOpen((value) => !value)}
                 type="button"
               >

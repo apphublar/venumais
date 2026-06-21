@@ -119,7 +119,12 @@
   gap: 12px;
 }
 
-.client-hero-top > div {
+.client-hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-hero-top > div:not(.client-hero-copy) {
   min-width: 0;
 }
 
@@ -349,7 +354,6 @@
 }
 
 .client-product-card {
-  overflow: hidden;
   border: 1px solid var(--client-line);
   border-radius: 16px;
   background: var(--client-card);
@@ -357,6 +361,7 @@
 
 .client-product-thumb {
   height: 96px;
+  overflow: hidden;
   background: var(--client-chip);
 }
 
@@ -375,14 +380,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   margin-top: 8px;
+  min-width: 0;
 }
 
 .client-product-price {
+  flex: 1;
+  min-width: 0;
   color: var(--client-green-700);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .client-product-quote {
@@ -398,26 +409,28 @@
 .client-product-qty-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
 .client-product-qty-value {
-  min-width: 16px;
+  min-width: 14px;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
 .client-qty-button {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   border: 1px solid var(--client-line);
   border-radius: 10px;
   background: var(--client-card);
   color: var(--client-ink-2);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .client-qty-button-primary,
@@ -429,11 +442,12 @@
 
 .client-product-add {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   border-radius: 10px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .client-cart-bar {
@@ -954,6 +968,16 @@
   cursor: pointer;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-left: auto;
+}
+
+.client-hero-avatar {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .client-screen-header {
@@ -1027,8 +1051,43 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: var(--client-bg);
   animation: clientSlideIn 0.28s ease;
+}
+
+.client-overlay > .client-screen-header {
+  flex-shrink: 0;
+}
+
+.client-overlay > .client-screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.client-app .vendor-button-primary {
+  background: var(--client-green-600);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(18, 138, 93, 0.28);
+}
+
+.client-conta-whats-button {
+  flex: 1;
+  justify-content: center;
+  background: var(--client-green-600);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(18, 138, 93, 0.22);
+}
+
+.client-conta-alert-actions .vendor-button-primary {
+  flex: 1;
+  justify-content: center;
 }
 
 .client-overlay-footer {
