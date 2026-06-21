@@ -18,7 +18,7 @@ import {
 import {
   getAccountChangeRequestLabel,
   type CustomerAccountChangeRequest
-} from "@/lib/customers/account-requests";
+} from "@/lib/customers/account-requests.types";
 import type { Customer } from "@/lib/database/types";
 import type { SaleWithRelations } from "@/lib/sales/types";
 
