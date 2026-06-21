@@ -2688,6 +2688,36 @@ button.vendor-card {
   background: var(--vendor-card);
 }
 
+.vendor-sheet-scroll {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.vendor-sheet-tall.vendor-sheet-scroll {
+  max-height: 92vh;
+}
+
+.vendor-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+
+.vendor-sheet-footer {
+  flex-shrink: 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--vendor-line);
+  background: var(--vendor-card);
+  display: grid;
+  gap: 10px;
+}
+
 .vendor-sheet-handle {
   width: 42px;
   height: 4px;

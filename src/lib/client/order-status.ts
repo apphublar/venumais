@@ -41,6 +41,25 @@ export function isOrderEditable(status: string): boolean {
   return ["new", "quote", "quoted", "quote_answered"].includes(status);
 }
 
+/** Pedido pode ser cancelado pelo cliente antes da loja confirmar pagamento */
+export function isOrderCancellable(status: string): boolean {
+  return [
+    "new",
+    "quote",
+    "quoted",
+    "quote_answered",
+    "awaiting_payment",
+    "payment_review",
+    "awaiting_card",
+    "cash_on_delivery"
+  ].includes(status);
+}
+
+/** Pedido quitado — cliente pode ver recibo */
+export function isOrderReceiptAvailable(status: string): boolean {
+  return ["paid", "delivering", "delivered"].includes(status);
+}
+
 /** Pedido aguarda a loja precificar (orçamento não respondido) */
 export function isQuoteUnresolved(status: string): boolean {
   return status === "quote" || status === "new";

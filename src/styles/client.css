@@ -874,6 +874,12 @@
   white-space: nowrap;
 }
 
+.client-cart-pix-step {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
 .client-cart-pix-hint {
   font-size: 0.75rem;
   color: var(--client-ink-3);

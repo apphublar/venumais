@@ -359,4 +359,59 @@ $$;
 revoke all on function public.list_customer_account_change_requests_for_store(uuid, uuid) from public;
 grant execute on function public.list_customer_account_change_requests_for_store(uuid, uuid) to authenticated;
 
+-- ── Cancelamento pelo cliente enquanto pagamento não foi confirmado pela loja ──
+create or replace function public.cancel_customer_order_for_portal(
+  p_store_id uuid,
+  p_order_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_customer_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Autenticação necessária.';
+  end if;
+
+  select customer.id
+    into v_customer_id
+  from public.customers customer
+  where customer.store_id = p_store_id
+    and customer.user_id = auth.uid()
+  limit 1;
+
+  if not found then
+    raise exception 'Cliente não vinculado à loja.';
+  end if;
+
+  update public.store_orders
+    set status = 'cancelled',
+        cancelled_at = timezone('utc', now()),
+        edited_at = timezone('utc', now())
+  where id = p_order_id
+    and store_id = p_store_id
+    and customer_id = v_customer_id
+    and source = 'client'
+    and status in (
+      'new',
+      'quote',
+      'quoted',
+      'quote_answered',
+      'awaiting_payment',
+      'payment_review',
+      'awaiting_card',
+      'cash_on_delivery'
+    );
+
+  if not found then
+    raise exception 'Pedido não pode ser cancelado.';
+  end if;
+
+  return p_order_id;
+end;
+$$;
+
 commit;

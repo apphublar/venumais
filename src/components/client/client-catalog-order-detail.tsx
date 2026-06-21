@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ClientOverlay } from "@/components/client/client-overlay";
+import { ClientScreenHeader } from "@/components/client/client-screen-header";
+import { ClientOrderRecibo } from "@/components/client/client-order-recibo";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
 import { buildPixPayload } from "@/lib/pix/build-pix-code";
@@ -12,7 +15,13 @@ import {
   cancelClientOrderAction,
   type OrderDetailView
 } from "@/lib/client/actions";
-import { getOrderStatusMeta, isQuoteAnswered } from "@/lib/client/order-status";
+import {
+  getOrderStatusMeta,
+  isOrderCancellable,
+  isOrderEditable,
+  isOrderReceiptAvailable,
+  isQuoteAnswered
+} from "@/lib/client/order-status";
 import type { PortalOrder, PublicProduct, PublicStore } from "@/lib/client/queries";
 
 type PaymentMethod = "pix" | "cash" | "card";
@@ -49,6 +58,7 @@ export function ClientCatalogOrderDetail({
   storeSlug,
   store,
   onClose,
+  onEdit,
   onRefresh
 }: {
   order: PortalOrder;
@@ -57,12 +67,15 @@ export function ClientCatalogOrderDetail({
   storeSlug: string;
   store: PublicStore;
   onClose: () => void;
+  onEdit?: () => void;
   onRefresh: () => void;
 }) {
   const [detail, setDetail] = useState<OrderDetailView | null>(null);
   const [loading, setLoading] = useState(true);
   const [fechando, setFechando] = useState(false);
   const [desistir, setDesistir] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
   const [pgto, setPgto] = useState<PaymentMethod>("pix");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
@@ -182,32 +195,33 @@ export function ClientCatalogOrderDetail({
     });
   };
 
+  const handleCancelOrder = () => {
+    setError(null);
+    startTransition(async () => {
+      const res = await cancelClientOrderAction({ storeId, storeSlug, orderId: initialOrder.id });
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      onRefresh();
+      onClose();
+    });
+  };
+
+  const canEdit = isOrderEditable(status) && Boolean(onEdit);
+  const canCancel = isOrderCancellable(status) && status !== "cancelled";
+  const canViewReceipt = isOrderReceiptAvailable(status) && Boolean(order);
+
   const pixBlock = (
-    <div>
-      <button
-        className="client-cart-pix-copy"
-        onClick={copyPix}
-        style={{ marginBottom: 10, width: "100%" }}
-        type="button"
-      >
+    <div className="client-cart-pix-step">
+      <button className="client-cart-pix-copy" onClick={copyPix} type="button">
         <code>{pixPayload}</code>
         <span>
           <VendorIcon name={pixCopied ? "check" : "copy"} size={16} />
           {pixCopied ? "Copiado" : "Copiar"}
         </span>
       </button>
-      <label className="client-pay-receipt" style={{ cursor: "pointer" }}>
-        <VendorIcon name={receiptFile ? "check-circle" : "attach"} size={18} />
-        <span style={{ flex: 1 }}>
-          {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
-        </span>
-        <button
-          onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
-          style={{ fontSize: 12, color: "var(--green-600)", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-          type="button"
-        >
-          {receiptFile ? "Trocar" : "Escolher"}
-        </button>
+      <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
         <input
           accept="image/jpeg,image/png,image/webp,application/pdf"
           onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
@@ -215,6 +229,8 @@ export function ClientCatalogOrderDetail({
           style={{ display: "none" }}
           type="file"
         />
+        <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
+        <span>{receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}</span>
       </label>
     </div>
   );
@@ -225,42 +241,25 @@ export function ClientCatalogOrderDetail({
     year: "numeric"
   });
 
+  if (showReceipt && order) {
+    return <ClientOrderRecibo onClose={() => setShowReceipt(false)} order={order} store={store} />;
+  }
+
   return (
-    <div className="vendor-sheet-backdrop" onClick={onClose} role="presentation">
-      <div
-        aria-labelledby="order-detail-title"
-        aria-modal="true"
-        className="vendor-sheet vendor-sheet-tall"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-      >
-        <div className="vendor-sheet-handle" />
+    <ClientOverlay>
+      <ClientScreenHeader
+        onBack={onClose}
+        subtitle={`${formattedDate} · ${initialOrder.delivery_type === "delivery" ? "Entrega" : "Retirada"}`}
+        title={`Pedido #${String(initialOrder.order_code).padStart(4, "0")}`}
+      />
 
-        <div className="vendor-sheet-header">
-          <button
-            aria-label="Fechar"
-            className="vendor-dashboard-icon-btn"
-            onClick={onClose}
-            type="button"
-          >
-            <VendorIcon name="arrow-left" size={18} />
-          </button>
-          <div style={{ flex: 1 }}>
-            <h2 id="order-detail-title" style={{ margin: 0, fontSize: "1rem" }}>
-              Pedido #{String(initialOrder.order_code).padStart(4, "0")}
-            </h2>
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--client-ink-3)", fontWeight: 600 }}>
-              {formattedDate} · {initialOrder.delivery_type === "delivery" ? "Entrega" : "Retirada"}
-            </p>
-          </div>
+      {loading ? (
+        <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--client-ink-3)", fontSize: "0.85rem" }}>
+          Carregando…
         </div>
-
-        {loading ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--client-ink-3)", fontSize: "0.85rem" }}>
-            Carregando…
-          </div>
-        ) : (
-          <div className="vendor-sheet-body">
+      ) : (
+        <>
+          <div className="client-screen-body">
             {/* ── Badge de status ── */}
             <div style={{ marginBottom: 14 }}>
               <PedidoStatusBadge status={status} />
@@ -344,7 +343,7 @@ export function ClientCatalogOrderDetail({
                 {!desistir ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
                     <button
-                      className="vendor-button vendor-button-primary"
+                      className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
                       disabled={pending}
                       onClick={() => setFechando(true)}
                       type="button"
@@ -449,10 +448,9 @@ export function ClientCatalogOrderDetail({
                     Voltar
                   </button>
                   <button
-                    className="vendor-button vendor-button-primary"
+                    className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
                     disabled={pending}
                     onClick={handleFecharOrcamento}
-                    style={{ flex: 2 }}
                     type="button"
                   >
                     <VendorIcon name="check-circle" size={18} />
@@ -469,18 +467,20 @@ export function ClientCatalogOrderDetail({
                   <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
                     PAGUE COM PIX
                   </p>
-                  <div className="client-pay-amount-card" style={{ marginBottom: 10 }}>
-                    <span>Total a pagar</span>
+                  <div className="client-pay-pix-amount-card" style={{ marginBottom: 10 }}>
+                    <span>Pague com PIX</span>
                     <strong>{formatBRL(total)}</strong>
                     {store.pix_receiver_name ? (
-                      <small>Para: {store.pix_receiver_name}</small>
-                    ) : null}
+                      <small>para {store.pix_receiver_name}</small>
+                    ) : (
+                      <small>para {store.name}</small>
+                    )}
                   </div>
                   {pixBlock}
                   {error ? <p className="client-auth-error" style={{ marginTop: 8 }}>{error}</p> : null}
                   {!paymentInformed ? (
                     <button
-                      className="vendor-button vendor-button-primary"
+                      className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
                       disabled={pending}
                       onClick={handleInformPayment}
                       style={{ marginTop: 12 }}
@@ -641,7 +641,7 @@ export function ClientCatalogOrderDetail({
                         </label>
                         {error ? <p className="client-auth-error" style={{ margin: 0 }}>{error}</p> : null}
                         <button
-                          className="vendor-button vendor-button-primary"
+                          className="vendor-button vendor-button-primary vendor-button-full"
                           disabled={pending}
                           onClick={handleInformCard}
                           type="button"
@@ -734,10 +734,85 @@ export function ClientCatalogOrderDetail({
               </div>
             )}
 
+            {order?.notes?.trim() ? (
+              <>
+                <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 8 }}>
+                  OBSERVAÇÕES
+                </p>
+                <p className="client-catalog-state-text" style={{ margin: 0, padding: "0 2px 8px" }}>
+                  {order.notes.trim()}
+                </p>
+              </>
+            ) : null}
+
+            {error ? <p className="client-auth-error">{error}</p> : null}
+
             <div style={{ height: 18 }} />
           </div>
-        )}
-      </div>
-    </div>
+
+          {(canEdit || canCancel || canViewReceipt) && !fechando ? (
+            <div className="client-overlay-footer" style={{ display: "grid", gap: 8 }}>
+              {canViewReceipt ? (
+                <button
+                  className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
+                  onClick={() => setShowReceipt(true)}
+                  type="button"
+                >
+                  <VendorIcon name="receipt" size={18} />
+                  Ver recibo
+                </button>
+              ) : null}
+              {canEdit ? (
+                <button
+                  className="vendor-button vendor-button-ghost vendor-button-full"
+                  disabled={pending}
+                  onClick={onEdit}
+                  type="button"
+                >
+                  <VendorIcon name="edit" size={16} />
+                  Editar pedido
+                </button>
+              ) : null}
+              {canCancel && !confirmCancel ? (
+                <button
+                  className="vendor-button vendor-button-danger vendor-button-full"
+                  disabled={pending}
+                  onClick={() => setConfirmCancel(true)}
+                  type="button"
+                >
+                  <VendorIcon name="x" size={16} />
+                  Cancelar pedido
+                </button>
+              ) : null}
+              {canCancel && confirmCancel ? (
+                <div className="client-catalog-state-card" style={{ background: "#fff6f6", borderColor: "#fbd5d5", flexDirection: "column" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--client-ink-1)", lineHeight: 1.45, marginBottom: 12 }}>
+                    Confirma o cancelamento deste pedido? Essa ação não pode ser desfeita.
+                  </div>
+                  <div style={{ display: "flex", gap: 9 }}>
+                    <button
+                      className="vendor-button vendor-button-ghost vendor-button-full"
+                      disabled={pending}
+                      onClick={() => setConfirmCancel(false)}
+                      type="button"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      className="vendor-button vendor-button-danger vendor-button-full"
+                      disabled={pending}
+                      onClick={handleCancelOrder}
+                      type="button"
+                    >
+                      {pending ? "Aguarde…" : "Confirmar cancelamento"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
+    </ClientOverlay>
   );
 }

@@ -200,7 +200,7 @@ export function ClientCartSheet({
       <div
         aria-labelledby="client-cart-title"
         aria-modal="true"
-        className="vendor-sheet vendor-sheet-tall"
+        className="vendor-sheet vendor-sheet-tall vendor-sheet-scroll"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
@@ -343,20 +343,6 @@ export function ClientCartSheet({
               />
 
               {error ? <p className="client-auth-error">{error}</p> : null}
-
-              <button
-                className="vendor-button vendor-button-primary"
-                disabled={pending || !items.length}
-                onClick={handleContinue}
-                type="button"
-              >
-                <VendorIcon name={hasVisiblePrices ? "arrow-right" : "share"} size={18} />
-                {pending
-                  ? "Enviando…"
-                  : hasVisiblePrices
-                    ? "Continuar para pagamento"
-                    : "Solicitar orçamento"}
-              </button>
             </>
           ) : (
             <>
@@ -397,7 +383,7 @@ export function ClientCartSheet({
               </div>
 
               {paymentMethod === "pix" && (
-                <div className="client-pay-pix-box">
+                <div className="client-cart-pix-step">
                   <div className="client-pay-pix-amount-card">
                     <span>Pague com PIX</span>
                     <strong>{formatBRL(total)}</strong>
@@ -414,11 +400,7 @@ export function ClientCartSheet({
                       {pixCopied ? "Copiado" : "Copiar"}
                     </span>
                   </button>
-                  <label className="client-pay-receipt">
-                    <VendorIcon name={receiptFile ? "check-circle" : "attach"} size={18} />
-                    <span>
-                      {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
-                    </span>
+                  <label className={`client-pay-receipt ${receiptFile ? "is-attached" : ""}`}>
                     <input
                       accept="image/jpeg,image/png,image/webp,application/pdf"
                       onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
@@ -426,13 +408,10 @@ export function ClientCartSheet({
                       style={{ display: "none" }}
                       type="file"
                     />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{ marginLeft: "auto", fontSize: 12, color: "var(--green-600)" }}
-                      type="button"
-                    >
-                      {receiptFile ? "Trocar" : "Escolher arquivo"}
-                    </button>
+                    <VendorIcon name={receiptFile ? "check" : "share"} size={24} />
+                    <span>
+                      {receiptFile ? receiptFile.name : "Anexar comprovante (opcional)"}
+                    </span>
                   </label>
                   <p className="client-cart-pix-hint">
                     Você também pode enviar o comprovante pelo WhatsApp depois de pagar.
@@ -466,15 +445,34 @@ export function ClientCartSheet({
                 </div>
               )}
 
-              <div className="client-cart-total" style={{ marginTop: 12 }}>
+              {error ? <p className="client-auth-error">{error}</p> : null}
+            </>
+          )}
+        </div>
+
+        <div className="vendor-sheet-footer">
+          {step === "cart" ? (
+            <button
+              className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
+              disabled={pending || !items.length}
+              onClick={handleContinue}
+              type="button"
+            >
+              <VendorIcon name={hasVisiblePrices ? "arrow-right" : "share"} size={18} />
+              {pending
+                ? "Enviando…"
+                : hasVisiblePrices
+                  ? "Continuar para pagamento"
+                  : "Solicitar orçamento"}
+            </button>
+          ) : (
+            <>
+              <div className="client-cart-total">
                 <span>Total</span>
                 <strong>{formatBRL(total)}</strong>
               </div>
-
-              {error ? <p className="client-auth-error">{error}</p> : null}
-
               <button
-                className="vendor-button vendor-button-primary"
+                className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
                 disabled={pending}
                 onClick={() => submitOrder(paymentMethod)}
                 type="button"

@@ -150,7 +150,14 @@ export function ClientPedidos({
 
   // ── OrcamentoCard (âmbar) — aguardando loja precificar ───────────────────────
   const renderOrcamentoCard = (order: PortalOrder) => (
-    <div className="client-orcamento-card" key={order.id}>
+    <div
+      className="client-orcamento-card"
+      key={order.id}
+      onClick={() => handleOpenDetail(order)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && handleOpenDetail(order)}
+    >
       <div className="client-orcamento-card-head">
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="order-code">Orçamento #{String(order.order_code).padStart(4, "0")}</div>
@@ -168,7 +175,7 @@ export function ClientPedidos({
         <span>Aguardando valores da loja</span>
       </div>
 
-      <div className="client-orcamento-card-foot">
+      <div className="client-orcamento-card-foot" onClick={(e) => e.stopPropagation()}>
         <button
           className="vendor-button vendor-button-ghost"
           disabled={isLoadingOrder || isPendingAction}
@@ -366,6 +373,11 @@ export function ClientPedidos({
       {selectedOrder ? (
         <ClientCatalogOrderDetail
           onClose={() => setSelectedOrder(null)}
+          onEdit={() => {
+            const orderId = selectedOrder.id;
+            setSelectedOrder(null);
+            handleOpenEditor(orderId);
+          }}
           onRefresh={() => router.refresh()}
           order={selectedOrder}
           products={products}
