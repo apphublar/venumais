@@ -162,7 +162,7 @@ export function ClientPedidos({
       >
         <div className={needsAction ? "client-cat-order-card-head" : "client-orcamento-card-head"}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="order-code">Pedido #{order.order_code}</div>
+            <div className="order-code">Pedido #{String(order.order_code).padStart(4, "0")}</div>
             <div className="order-date">
               {formatShortDate(order.created_at)} · {order.item_count}{" "}
               {order.item_count === 1 ? "item" : "itens"}
@@ -248,7 +248,7 @@ export function ClientPedidos({
       >
         <div className="client-cat-order-card-head">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="order-code">Pedido #{order.order_code}</div>
+            <div className="order-code">Pedido #{String(order.order_code).padStart(4, "0")}</div>
             <div className="order-date">
               {formatShortDate(order.created_at)} · {order.item_count}{" "}
               {order.item_count === 1 ? "item" : "itens"}

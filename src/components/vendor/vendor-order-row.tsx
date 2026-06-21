@@ -14,7 +14,13 @@ function orderStatusLabel(order: VendorStoreOrder) {
     return { label: "Comprovante", tone: "quote" as const };
   }
   if (order.status === "awaiting_payment") {
-    return { label: "Aguardando pagto", tone: "quote" as const };
+    return { label: "Em aberto", tone: "quote" as const };
+  }
+  if (order.status === "awaiting_card") {
+    return { label: "Aguardando cartão", tone: "quote" as const };
+  }
+  if (order.status === "cash_on_delivery") {
+    return { label: "A combinar", tone: "quote" as const };
   }
   if (order.status === "paid") {
     return { label: "Pago", tone: "new" as const };
@@ -28,7 +34,9 @@ function orderStatusLabel(order: VendorStoreOrder) {
   if (order.order_type === "wholesale") {
     return { label: "Encomenda", tone: "wholesale" as const };
   }
-
+  if (order.status === "quote_answered") {
+    return { label: "Orçamento respondido", tone: "quote" as const };
+  }
   if (order.status === "quoted" || order.status === "quote" || order.order_type === "quote") {
     return { label: "Orçamento", tone: "quote" as const };
   }
@@ -44,18 +52,27 @@ function orderProgressMeta(order: VendorStoreOrder) {
     return { percent: 88, left: "Pedido em entrega", right: "Em rota", done: false };
   }
   if (order.status === "paid") {
-    return { percent: 76, left: "Pagamento confirmado", right: "Pago", done: false };
+    return { percent: 100, left: "Pagamento confirmado", right: "Pago", done: true };
   }
   if (order.status === "payment_review") {
     return { percent: 62, left: "Comprovante enviado", right: "Em análise", done: false };
   }
+  if (order.status === "awaiting_card") {
+    return { percent: 56, left: "Aguardando pagto no cartão", right: "Cartão", done: false };
+  }
+  if (order.status === "cash_on_delivery") {
+    return { percent: 50, left: "Pagamento a combinar", right: "A combinar", done: false };
+  }
   if (order.status === "awaiting_payment") {
-    return { percent: 48, left: "Aguardando pagamento", right: "Pagamento", done: false };
+    return { percent: 44, left: "Aguardando pagamento", right: "Em aberto", done: false };
+  }
+  if (order.status === "quote_answered") {
+    return { percent: 35, left: "Orçamento respondido", right: "Aguardando cliente", done: false };
   }
   if (order.status === "quoted" || order.status === "quote") {
-    return { percent: 30, left: "Orçamento enviado", right: "Aguardando", done: false };
+    return { percent: 20, left: "Aguardando orçamento", right: "Orçamento", done: false };
   }
-  return { percent: 14, left: "Novo pedido recebido", right: "Novo", done: false };
+  return { percent: 10, left: "Novo pedido recebido", right: "Novo", done: false };
 }
 
 export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
@@ -74,6 +91,7 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
             color={order.customer_avatar_color}
             label={getCustomerInitials(order.customer_full_name)}
             size={42}
+            square
           />
           <div className="vendor-order-row-copy">
             <strong>{order.customer_full_name}</strong>

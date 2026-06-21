@@ -28,18 +28,19 @@ function formatOrderDate(iso: string) {
 }
 
 function orderTitle(order: StoreOrderDetail) {
+  const code = String(order.order_code).padStart(4, "0");
   if (order.order_type === "wholesale") {
-    return `Encomenda #${order.order_code}`;
+    return `Encomenda #${code}`;
   }
 
   if (
     ["quote", "quote_answered", "quoted"].includes(order.status) ||
     order.order_type === "quote"
   ) {
-    return `Orçamento #${order.order_code}`;
+    return `Orçamento #${code}`;
   }
 
-  return `Pedido #${order.order_code}`;
+  return `Pedido #${code}`;
 }
 
 export function OrderDetailView({
@@ -220,6 +221,7 @@ export function OrderDetailView({
             color={order.customer.avatar_color}
             label={getCustomerInitials(order.customer.full_name)}
             size={48}
+            square
           />
           <div>
             <strong>{order.customer.full_name}</strong>

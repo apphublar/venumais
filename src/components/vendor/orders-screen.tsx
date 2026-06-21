@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorOrderRow } from "@/components/vendor/vendor-order-row";
@@ -53,6 +53,8 @@ export function OrdersScreen({
   const [filter, setFilter] = useState<OrderFilter>(
     VALID_FILTERS.includes(initialFilter as OrderFilter) ? (initialFilter as OrderFilter) : "all"
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const list = useMemo(() => {
     return sales.filter((sale) => {
@@ -89,12 +91,26 @@ export function OrdersScreen({
     });
   }, [filter, sales]);
 
-  const openCatalogOrders = catalogOrders.filter((order) =>
-    ["new", "quote", "quoted", "awaiting_payment", "payment_review"].includes(order.status)
-  );
-  const paidCatalogOrders = catalogOrders.filter((order) =>
-    ["paid", "delivering", "delivered"].includes(order.status)
-  );
+  const normalizedSearch = searchQuery.replace(/\D/g, "");
+  const isSearching = normalizedSearch.length > 0;
+
+  const matchesSearch = (code: number | string) =>
+    String(code).padStart(4, "0").includes(normalizedSearch) ||
+    String(code).includes(normalizedSearch);
+
+  const openCatalogOrders = catalogOrders.filter((order) => {
+    if (isSearching) return matchesSearch(order.order_code);
+    return [
+      "new", "quote", "quoted", "quote_answered",
+      "awaiting_payment", "awaiting_card", "cash_on_delivery",
+      "payment_review"
+    ].includes(order.status);
+  });
+
+  const paidCatalogOrders = catalogOrders.filter((order) => {
+    if (isSearching) return false;
+    return ["paid", "delivering", "delivered"].includes(order.status);
+  });
 
   const newCount = openCatalogOrders.length;
   const totalCount = sales.length + catalogOrders.length;
@@ -129,6 +145,27 @@ export function OrdersScreen({
         </Link>
       </div>
 
+      <div className="vendor-orders-search">
+        <VendorIcon name="search" size={16} />
+        <input
+          inputMode="numeric"
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar por nº do pedido…"
+          ref={searchRef}
+          type="text"
+          value={searchQuery}
+        />
+        {searchQuery ? (
+          <button
+            aria-label="Limpar busca"
+            onClick={() => { setSearchQuery(""); searchRef.current?.focus(); }}
+            type="button"
+          >
+            <VendorIcon name="x" size={14} />
+          </button>
+        ) : null}
+      </div>
+
       <div className="vendor-filter-chips vendor-orders-filter-chips">
         {FILTERS.map(([key, label]) => {
           const count = filterCounts[key];
@@ -147,30 +184,43 @@ export function OrdersScreen({
       </div>
 
       <div className="vendor-orders-list">
-        {filter === "new" || filter === "all"
-          ? openCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
-          : null}
+        {isSearching ? (
+          openCatalogOrders.length > 0 ? (
+            openCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
+          ) : (
+            <div className="vendor-empty vendor-dashboard-empty">
+              <strong>Nenhum pedido encontrado.</strong>
+              <p>Nenhum pedido com o número &ldquo;{normalizedSearch}&rdquo;.</p>
+            </div>
+          )
+        ) : (
+          <>
+            {filter === "new" || filter === "all"
+              ? openCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
+              : null}
 
-        {(filter === "paid" || filter === "all")
-          ? paidCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
-          : null}
+            {(filter === "paid" || filter === "all")
+              ? paidCatalogOrders.map((order) => <VendorOrderRow key={order.id} order={order} />)
+              : null}
 
-        {filter !== "new" && list.length
-          ? list.map((sale) => <VendorSaleRow key={sale.id} sale={sale} />)
-          : null}
+            {filter !== "new" && list.length
+              ? list.map((sale) => <VendorSaleRow key={sale.id} sale={sale} />)
+              : null}
 
-        {filter === "new" && !catalogOrders.length ? (
-          <div className="vendor-empty vendor-dashboard-empty">
-            <strong>Nenhum pedido novo.</strong>
-            <p>Pedidos do catálogo do cliente aparecerão aqui.</p>
-          </div>
-        ) : null}
+            {filter === "new" && !catalogOrders.length ? (
+              <div className="vendor-empty vendor-dashboard-empty">
+                <strong>Nenhum pedido novo.</strong>
+                <p>Pedidos do catálogo do cliente aparecerão aqui.</p>
+              </div>
+            ) : null}
 
-        {filter !== "new" && filter !== "all" && !list.length ? (
-          <div className="vendor-empty vendor-dashboard-empty">
-            <strong>Nenhum pedido neste filtro.</strong>
-          </div>
-        ) : null}
+            {filter !== "new" && filter !== "all" && !list.length ? (
+              <div className="vendor-empty vendor-dashboard-empty">
+                <strong>Nenhum pedido neste filtro.</strong>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       {/* Cancelados pelo cliente */}
@@ -184,11 +234,12 @@ export function OrdersScreen({
                   color={order.customer_avatar_color}
                   label={getCustomerInitials(order.customer_full_name)}
                   size={40}
+                  square
                 />
                 <div className="vendor-cancelled-card-copy">
                   <strong>{order.customer_full_name}</strong>
                   <span>
-                    #{order.order_code} · cancelado{" "}
+                    #{String(order.order_code).padStart(4, "0")} · cancelado{" "}
                     {order.cancelled_at ? formatShortDate(order.cancelled_at.slice(0, 10)) : ""}
                   </span>
                 </div>

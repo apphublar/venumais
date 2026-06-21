@@ -229,6 +229,10 @@ button.vendor-card {
   flex-shrink: 0;
 }
 
+.vendor-avatar-square {
+  border-radius: 12px;
+}
+
 .vendor-search {
   display: flex;
   align-items: center;
@@ -3180,6 +3184,49 @@ button.vendor-card {
   color: #fff;
 }
 
+.vendor-orders-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 10px 13px;
+  background: var(--vendor-card);
+  border: 1px solid var(--vendor-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16,32,24,.04);
+}
+
+.vendor-orders-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vendor-ink-1);
+  min-width: 0;
+}
+
+.vendor-orders-search input::placeholder {
+  color: var(--vendor-ink-3);
+  font-weight: 500;
+}
+
+.vendor-orders-search button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--vendor-line);
+  color: var(--vendor-ink-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .vendor-orders-filter-chips {
   display: flex;
   gap: 8px;
@@ -3252,7 +3299,7 @@ button.vendor-card {
 
 .vendor-order-row {
   margin-bottom: 9px;
-  padding: 13px;
+  padding: 13px 15px;
 }
 
 .vendor-order-row-main {
@@ -3442,24 +3489,37 @@ button.vendor-card {
 
 .vendor-order-detail-address-warn {
   background: #fff7ed;
-  border-color: #fde9c8;
+  border-color: #fed7aa;
+  border-left: 4px solid #f97316;
+}
+
+.vendor-order-detail-address-warn > svg {
+  color: #ea580c;
 }
 
 .vendor-order-detail-address strong,
 .vendor-order-detail-notes strong,
 .vendor-order-detail-wholesale-note strong {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--vendor-ink-2);
+}
+
+.vendor-order-detail-address-warn strong {
+  color: #c2410c;
 }
 
 .vendor-order-detail-address span,
 .vendor-order-detail-notes span {
   display: block;
-  margin-top: 2px;
+  margin-top: 3px;
   color: var(--vendor-ink-2);
-  font-size: 0.84rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .vendor-order-detail-notes {

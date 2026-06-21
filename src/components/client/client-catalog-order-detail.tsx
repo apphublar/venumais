@@ -63,9 +63,12 @@ export function ClientCatalogOrderDetail({
   const [pgto, setPgto] = useState<PaymentMethod>("pix");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [pixCopied, setPixCopied] = useState(false);
+  const [cardLinkOpened, setCardLinkOpened] = useState(false);
+  const [cardReceiptFile, setCardReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -108,16 +111,22 @@ export function ClientCatalogOrderDetail({
     });
   };
 
-  const handleInformCard = () => {
+  const handleOpenCardLink = () => {
     if (order?.vendor_payment_link) {
       window.open(order.vendor_payment_link, "_blank", "noopener noreferrer");
     }
+    setCardLinkOpened(true);
+    setError(null);
+  };
+
+  const handleInformCard = () => {
     setError(null);
     startTransition(async () => {
       const fd = new FormData();
       fd.append("storeId", storeId);
       fd.append("storeSlug", storeSlug);
       fd.append("orderId", initialOrder.id);
+      if (cardReceiptFile) fd.append("receipt", cardReceiptFile);
       const res = await informOrderPaymentAction(fd);
       if (res.error) setError(res.error);
       else { onRefresh(); onClose(); }
@@ -221,7 +230,7 @@ export function ClientCatalogOrderDetail({
           </button>
           <div style={{ flex: 1 }}>
             <h2 id="order-detail-title" style={{ margin: 0, fontSize: "1rem" }}>
-              Pedido #{initialOrder.order_code}
+              Pedido #{String(initialOrder.order_code).padStart(4, "0")}
             </h2>
             <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--client-ink-3)", fontWeight: 600 }}>
               {formattedDate} · {initialOrder.delivery_type === "delivery" ? "Entrega" : "Retirada"}
@@ -495,7 +504,7 @@ export function ClientCatalogOrderDetail({
               </div>
             )}
 
-            {/* aguardando cartão → botão pagar */}
+            {/* aguardando cartão → dois botões: abrir link + confirmar */}
             {status === "awaiting_card" && (
               <>
                 <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
@@ -532,10 +541,10 @@ export function ClientCatalogOrderDetail({
                         </span>
                       </div>
                     )}
-                    {error ? <p className="client-auth-error">{error}</p> : null}
+
+                    {/* Botão 1: apenas abre o link, não confirma pagamento */}
                     <button
-                      disabled={pending}
-                      onClick={handleInformCard}
+                      onClick={handleOpenCardLink}
                       style={{
                         width: "100%",
                         minHeight: 54,
@@ -550,14 +559,82 @@ export function ClientCatalogOrderDetail({
                         alignItems: "center",
                         justifyContent: "center",
                         gap: 9,
-                        cursor: pending ? "default" : "pointer",
-                        boxShadow: "0 4px 14px rgba(109,40,217,.3)"
+                        cursor: "pointer",
+                        boxShadow: "0 4px 14px rgba(109,40,217,.3)",
+                        marginBottom: 10
                       }}
                       type="button"
                     >
-                      <VendorIcon name="cards" size={20} />
-                      {pending ? "Aguarde…" : "Pagar com cartão"}
+                      <VendorIcon name="share" size={20} />
+                      Abrir link de pagamento
                     </button>
+
+                    {/* Botão 2: confirmar pagamento (só aparece após abrir o link, ou sempre disponível) */}
+                    {cardLinkOpened && (
+                      <div
+                        style={{
+                          padding: "14px",
+                          background: "var(--client-bg-2)",
+                          borderRadius: 14,
+                          border: "1px solid var(--client-line)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10
+                        }}
+                      >
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--client-ink-2)" }}>
+                          Já realizou o pagamento? Informe a loja:
+                        </p>
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 9,
+                            padding: "10px 12px",
+                            background: "#fff",
+                            border: "1px dashed var(--client-line-2)",
+                            borderRadius: 10,
+                            cursor: "pointer",
+                            fontSize: 13
+                          }}
+                        >
+                          <VendorIcon
+                            name={cardReceiptFile ? "check-circle" : "attach"}
+                            size={17}
+                            style={{ color: cardReceiptFile ? "var(--green-600)" : "var(--client-ink-3)" }}
+                          />
+                          <span style={{ flex: 1, color: "var(--client-ink-2)", fontWeight: 600 }}>
+                            {cardReceiptFile ? cardReceiptFile.name : "Anexar comprovante (opcional)"}
+                          </span>
+                          <button
+                            onClick={(e) => { e.preventDefault(); cardFileInputRef.current?.click(); }}
+                            style={{ fontSize: 12, color: "#6d28d9", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+                            type="button"
+                          >
+                            {cardReceiptFile ? "Trocar" : "Escolher"}
+                          </button>
+                          <input
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={(e) => setCardReceiptFile(e.target.files?.[0] ?? null)}
+                            ref={cardFileInputRef}
+                            style={{ display: "none" }}
+                            type="file"
+                          />
+                        </label>
+                        {error ? <p className="client-auth-error" style={{ margin: 0 }}>{error}</p> : null}
+                        <button
+                          className="vendor-button vendor-button-primary"
+                          disabled={pending}
+                          onClick={handleInformCard}
+                          type="button"
+                        >
+                          <VendorIcon name="check-circle" size={18} />
+                          {pending ? "Aguarde…" : "Já paguei no cartão"}
+                        </button>
+                      </div>
+                    )}
+
+                    {!cardLinkOpened && error ? <p className="client-auth-error">{error}</p> : null}
                   </>
                 ) : (
                   <div
@@ -573,7 +650,7 @@ export function ClientCatalogOrderDetail({
                     }}
                   >
                     <VendorIcon name="check-circle" size={16} />
-                    Pagamento realizado · aguardando a loja confirmar
+                    Pagamento informado · aguardando a loja confirmar
                   </div>
                 )}
               </>
