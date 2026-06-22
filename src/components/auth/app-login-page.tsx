@@ -277,7 +277,11 @@ export function AppLoginPage({
               </p>
               <Link
                 className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full app-submit-btn"
-                href="/criar-conta"
+                href={
+                  nextPath !== "/painel"
+                    ? `/criar-conta?next=${encodeURIComponent(nextPath)}`
+                    : "/criar-conta"
+                }
               >
                 <VendorIcon name="plus" size={18} />
                 Começar cadastro

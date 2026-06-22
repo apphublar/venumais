@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { VendorOrderCustomerPanel } from "@/components/vendor/vendor-order-customer-panel";
 import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
@@ -279,6 +280,8 @@ export function OrderDetailView({
             </div>
           </VendorCard>
         ) : null}
+
+        <VendorOrderCustomerPanel order={order} storeId={storeId} />
 
         {order.notes ? (
           <VendorCard className="vendor-order-detail-notes">

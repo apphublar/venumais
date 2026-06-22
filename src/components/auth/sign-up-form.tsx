@@ -5,7 +5,13 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { useAuthRedirect } from "@/components/auth/use-auth-redirect";
 import { signUpAction, type AuthActionState } from "@/lib/auth/actions";
 
-export function SignUpForm({ footer }: { footer?: React.ReactNode }) {
+export function SignUpForm({
+  footer,
+  nextPath = "/criar-conta?step=loja"
+}: {
+  footer?: React.ReactNode;
+  nextPath?: string;
+}) {
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
     signUpAction,
     {}
@@ -19,6 +25,7 @@ export function SignUpForm({ footer }: { footer?: React.ReactNode }) {
       title="Criar minha loja"
     >
       <form action={formAction} className="auth-form">
+        <input name="next" type="hidden" value={nextPath} />
         <label className="field">
           <span>Seu nome</span>
           <input autoComplete="name" minLength={2} name="fullName" required type="text" />

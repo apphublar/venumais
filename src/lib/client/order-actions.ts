@@ -206,3 +206,53 @@ export async function setStoreOrderInstallmentPaymentLinkAction(input: {
   revalidatePath(`/painel/pedidos/${input.orderId}`);
   return { success: true as const };
 }
+
+export type OrderChatMessage = {
+  id: string;
+  sender_type: "vendor" | "client";
+  body: string;
+  created_at: string;
+  read_at?: string | null;
+};
+
+export async function listVendorOrderMessagesAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_order_messages_for_vendor", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { messages: (data ?? []) as OrderChatMessage[] };
+}
+
+export async function sendVendorOrderMessageAction(
+  storeId: string,
+  orderId: string,
+  body: string
+) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("send_order_message_for_vendor", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_body: body
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/painel/pedidos/${orderId}`);
+  return {};
+}
+
+export async function markVendorOrderMessagesReadAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  await supabase.rpc("mark_order_messages_read_for_vendor", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+}

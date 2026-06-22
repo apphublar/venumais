@@ -44,6 +44,7 @@ export async function getStoreOrder(storeId: string, orderId: string) {
         id,
         full_name,
         phone,
+        email,
         avatar_color,
         address,
         address_street,

@@ -2661,3 +2661,27 @@
     transform: scale(1);
   }
 }
+
+.client-order-chat-section {
+  margin-top: 16px;
+}
+
+.client-order-chat-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--client-line);
+  border-radius: 14px;
+  background: var(--green-50);
+  color: var(--green-700);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.client-order-chat-toggle.is-open {
+  margin-bottom: 10px;
+}

@@ -7,11 +7,20 @@ import { getCurrentUser, getActiveStore } from "@/lib/auth/session";
 type CriarContaPageProps = {
   searchParams: Promise<{
     step?: string;
+    next?: string;
   }>;
 };
 
+function safeNextPath(value?: string) {
+  if (!value?.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+  return value;
+}
+
 export default async function CriarContaPage({ searchParams }: CriarContaPageProps) {
   const params = await searchParams;
+  const nextPath = safeNextPath(params.next);
   const user = await getCurrentUser();
   const store = user ? await getActiveStore(user.id) : null;
 
@@ -19,11 +28,15 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
     redirect("/painel");
   }
 
+  if (user && nextPath) {
+    redirect(nextPath);
+  }
+
   const step = params.step === "loja" && user ? "loja" : "conta";
 
   if (step === "loja") {
     if (!user) {
-      redirect("/criar-conta");
+      redirect(nextPath ? `/criar-conta?next=${encodeURIComponent(nextPath)}` : "/criar-conta");
     }
 
     return (
@@ -37,13 +50,19 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
     );
   }
 
+  const signUpNext = nextPath ?? "/criar-conta?step=loja";
+  const loginHref = nextPath
+    ? `/app?mode=vendor&next=${encodeURIComponent(nextPath)}`
+    : "/entrar";
+
   return (
     <SignUpForm
       footer={
         <p>
-          Já possui conta? <Link href="/entrar">Entrar</Link>
+          Já possui conta? <Link href={loginHref}>Entrar</Link>
         </p>
       }
+      nextPath={signUpNext}
     />
   );
 }

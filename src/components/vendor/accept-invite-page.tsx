@@ -61,7 +61,9 @@ export function AcceptInvitePage({
   }
 
   if (!isLoggedIn) {
-    const loginUrl = `/entrar?next=${encodeURIComponent(`/convite?token=${token}`)}`;
+    const inviteNext = `/convite?token=${token}`;
+    const loginUrl = `/app?mode=vendor&next=${encodeURIComponent(inviteNext)}`;
+    const signUpUrl = `/criar-conta?next=${encodeURIComponent(inviteNext)}`;
     return (
       <main className="vendor-invite-page">
         <div className="vendor-invite-card">
@@ -74,13 +76,17 @@ export function AcceptInvitePage({
             <strong>{invite.store_name}</strong> como{" "}
             <strong>{roleLabel(invite.role)}</strong>.
           </p>
+          <div className="vendor-hint-card">
+            <VendorIcon name="check" size={17} />
+            <p>
+              <b>Como entrar:</b> crie sua conta ou faça login com o mesmo email. Depois volte
+              aqui para aceitar o convite e acessar o painel da loja.
+            </p>
+          </div>
           <Link className="vendor-button vendor-button-primary" href={loginUrl}>
             Entrar para aceitar
           </Link>
-          <Link
-            className="vendor-button vendor-button-ghost"
-            href={`/criar-conta?next=${encodeURIComponent(`/convite?token=${token}`)}`}
-          >
+          <Link className="vendor-button vendor-button-ghost" href={signUpUrl}>
             Criar conta
           </Link>
         </div>

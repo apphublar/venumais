@@ -128,14 +128,15 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
   };
 
   return (
-    <>
+    <div className="vendor-form-screen">
       <VendorScreenHeader
         backHref="/painel"
         subtitle="Marca, PIX e link do catálogo"
         title="Configurações da loja"
       />
 
-      <section className="vendor-screen-body vendor-settings-screen">
+      <div className="vendor-form-page">
+        <div className="vendor-form-page-body vendor-settings-screen">
         {status === "saved" ? (
           <div className="vendor-hint-card" role="status">
             <VendorIcon name="check" size={17} />
@@ -329,9 +330,8 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         >
           {isPending ? "Salvando…" : "Salvar configurações"}
         </button>
-
-        <div className="vendor-dashboard-spacer" />
-      </section>
-    </>
+        </div>
+      </div>
+    </div>
   );
 }

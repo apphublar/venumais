@@ -118,6 +118,14 @@ function InviteSheet({
                 </p>
               </div>
 
+              <div className="vendor-hint-card">
+                <VendorIcon name="check" size={17} />
+                <p>
+                  <b>Fluxo do vendedor:</b> abrir o link → criar conta ou entrar → aceitar convite →
+                  acessar o painel da loja com as permissões escolhidas abaixo.
+                </p>
+              </div>
+
               <div className="vendor-field">
                 <span>Nível de acesso</span>
                 <div className="vendor-cupom-type-row">

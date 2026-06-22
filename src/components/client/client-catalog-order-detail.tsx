@@ -8,6 +8,7 @@ import { ClientPaymentProofRecord } from "@/components/client/client-payment-pro
 import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
+import { OrderChatPanel } from "@/components/shared/order-chat-panel";
 import { formatBRL } from "@/lib/products/format";
 import { formatShortDate } from "@/lib/sales/format";
 import {
@@ -16,6 +17,9 @@ import {
   informOrderPaymentAction,
   finalizeClientOrderWithPaymentAction,
   cancelClientOrderAction,
+  listPortalOrderMessagesAction,
+  markPortalOrderMessagesReadAction,
+  sendPortalOrderMessageAction,
   type OrderDetailView
 } from "@/lib/client/actions";
 import {
@@ -76,6 +80,7 @@ export function ClientCatalogOrderDetail({
 }) {
   const [detail, setDetail] = useState<OrderDetailView | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const [fechando, setFechando] = useState(false);
   const [desistir, setDesistir] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -854,6 +859,27 @@ export function ClientCatalogOrderDetail({
                 </p>
               </>
             ) : null}
+
+            <section className="client-order-chat-section">
+              <button
+                className={`client-order-chat-toggle${chatOpen ? " is-open" : ""}`}
+                onClick={() => setChatOpen((value) => !value)}
+                type="button"
+              >
+                <VendorIcon name="message" size={18} />
+                {chatOpen ? "Ocultar chat com a loja" : "Chat com a loja sobre este pedido"}
+              </button>
+
+              {chatOpen ? (
+                <OrderChatPanel
+                  emptyHint="Envie uma mensagem para a loja sobre este pedido."
+                  loadMessages={() => listPortalOrderMessagesAction(storeId, initialOrder.id)}
+                  markRead={() => markPortalOrderMessagesReadAction(storeId, initialOrder.id)}
+                  sendMessage={(body) => sendPortalOrderMessageAction(storeId, initialOrder.id, body)}
+                  viewer="client"
+                />
+              ) : null}
+            </section>
 
             {error ? <p className="client-auth-error">{error}</p> : null}
 

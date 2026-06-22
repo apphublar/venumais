@@ -47,6 +47,7 @@ export type StoreOrderDetail = {
     id: string;
     full_name: string;
     phone: string;
+    email: string | null;
     avatar_color: string;
     address_street: string | null;
     address_number: string | null;

@@ -96,6 +96,10 @@ export async function signUpAction(
   const phone = String(formData.get("phone") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const nextRaw = String(formData.get("next") ?? "").trim();
+  const nextPath =
+    nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/criar-conta?step=loja";
+  const afterSignupPath = nextPath.startsWith("/convite") ? nextPath : "/criar-conta?step=loja";
 
   if (fullName.length < 2) {
     return { error: "Informe seu nome completo." };
@@ -123,7 +127,7 @@ export async function signUpAction(
         full_name: fullName,
         phone
       },
-      emailRedirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent("/criar-conta?step=loja")}`
+      emailRedirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent(afterSignupPath)}`
     }
   });
 
@@ -149,7 +153,7 @@ export async function signUpAction(
     }
   }
 
-  return { redirectTo: "/criar-conta?step=loja" };
+  return { redirectTo: afterSignupPath };
 }
 
 export async function createStoreAction(

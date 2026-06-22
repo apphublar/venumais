@@ -1154,3 +1154,52 @@ export async function requestClientAccountChangeAction(input: {
   revalidatePath("/painel/clientes");
   return {};
 }
+
+export type PortalOrderChatMessage = {
+  id: string;
+  sender_type: "vendor" | "client";
+  body: string;
+  created_at: string;
+  read_at?: string | null;
+};
+
+export async function listPortalOrderMessagesAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_order_messages_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  return { messages: (data ?? []) as PortalOrderChatMessage[] };
+}
+
+export async function sendPortalOrderMessageAction(
+  storeId: string,
+  orderId: string,
+  body: string
+) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("send_order_message_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_body: body
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
+  }
+
+  return {};
+}
+
+export async function markPortalOrderMessagesReadAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  await supabase.rpc("mark_order_messages_read_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+}
