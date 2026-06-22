@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireStoreAccess } from "@/lib/auth/session";
+import { isDefaultBrandPalette } from "@/lib/stores/brand-color";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 type UpdateStoreInput = {
@@ -33,6 +34,11 @@ export async function updateStoreAction(
   }
   const hasLogoUrl = Object.prototype.hasOwnProperty.call(data, "logo_url");
   const logoUrl = data.logo_url?.trim() ?? null;
+  const tagline = data.catalog_tagline?.trim() ?? "";
+  const brandCustomized =
+    Boolean(logoUrl) ||
+    Boolean(tagline) ||
+    !isDefaultBrandPalette(brandColor, brandTextColor);
 
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase
@@ -41,8 +47,9 @@ export async function updateStoreAction(
       ...(name ? { name } : {}),
       ...(brandColor ? { brand_color: brandColor } : {}),
       ...(brandTextColor ? { brand_text_color: brandTextColor } : {}),
+      brand_customized: brandCustomized,
       ...(hasLogoUrl ? { logo_url: logoUrl } : {}),
-      catalog_tagline: data.catalog_tagline?.trim() || null,
+      catalog_tagline: tagline || null,
       pix_key: data.pix_key?.trim() || null,
       pix_receiver_name: data.pix_receiver_name?.trim() || null
     })
@@ -54,6 +61,7 @@ export async function updateStoreAction(
 
   revalidatePath("/painel/configuracoes");
   revalidatePath("/painel");
+  revalidatePath(`/loja/${store.slug}`);
   return {};
 }
 

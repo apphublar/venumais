@@ -6,6 +6,7 @@ export type PublicStore = {
   slug: string;
   brand_color: string;
   brand_text_color?: string | null;
+  brand_customized?: boolean;
   catalog_tagline: string;
   logo_url: string | null;
   pix_key: string | null;

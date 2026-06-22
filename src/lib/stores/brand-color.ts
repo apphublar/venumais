@@ -1,3 +1,6 @@
+export const DEFAULT_BRAND_COLOR = "#11885b";
+export const DEFAULT_BRAND_TEXT_COLOR = "#ffffff";
+
 function hexToRgb(hex: string) {
   const normalized = hex.replace("#", "");
   if (normalized.length !== 6) {
@@ -61,4 +64,50 @@ export function getBrandColorVars(brandColor: string, brandTextColor?: string | 
     "--vendor-green-600": rgbToHex(light),
     "--vendor-green-700": rgbToHex(dark)
   } as Record<string, string>;
+}
+
+export function isDefaultBrandPalette(
+  brandColor?: string | null,
+  brandTextColor?: string | null
+) {
+  const color = brandColor?.trim().toLowerCase() ?? DEFAULT_BRAND_COLOR;
+  const textColor = brandTextColor?.trim().toLowerCase() ?? DEFAULT_BRAND_TEXT_COLOR;
+  return color === DEFAULT_BRAND_COLOR && textColor === DEFAULT_BRAND_TEXT_COLOR;
+}
+
+export function shouldApplyStoreBrand(input: {
+  brand_color: string;
+  brand_text_color?: string | null;
+  brand_customized?: boolean | null;
+  catalog_tagline?: string | null;
+  logo_url?: string | null;
+}) {
+  if (input.brand_customized) {
+    return true;
+  }
+
+  if (input.logo_url?.trim()) {
+    return true;
+  }
+
+  const tagline = input.catalog_tagline?.trim();
+  if (tagline && tagline !== "Catálogo online") {
+    return true;
+  }
+
+  return !isDefaultBrandPalette(input.brand_color, input.brand_text_color);
+}
+
+export function resolveStoreBrandStyle(input: {
+  brand_color: string;
+  brand_text_color?: string | null;
+  brand_customized?: boolean | null;
+  catalog_tagline?: string | null;
+  logo_url?: string | null;
+}) {
+  if (!shouldApplyStoreBrand(input)) {
+    return undefined;
+  }
+
+  return getBrandColorVars(input.brand_color, input.brand_text_color);
 }

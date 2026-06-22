@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk } from "next/font/google";
 import { getPublicStoreBySlug } from "@/lib/client/queries";
-import { getBrandColorVars } from "@/lib/stores/brand-color";
+import { resolveStoreBrandStyle } from "@/lib/stores/brand-color";
 import "@/styles/client.css";
+
+export const dynamic = "force-dynamic";
 
 const hanken = Hanken_Grotesk({
   subsets: ["latin"],
@@ -23,9 +25,7 @@ type LojaLayoutProps = {
 export default async function LojaLayout({ children, params }: LojaLayoutProps) {
   const { slug } = await params;
   const store = await getPublicStoreBySlug(slug).catch(() => null);
-  const brandStyle = store
-    ? (getBrandColorVars(store.brand_color, store.brand_text_color) as React.CSSProperties)
-    : undefined;
+  const brandStyle = store ? (resolveStoreBrandStyle(store) as React.CSSProperties) : undefined;
 
   return (
     <div className={hanken.variable} style={brandStyle}>

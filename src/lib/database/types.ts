@@ -12,6 +12,7 @@ export type Store = {
   logo_url?: string | null;
   brand_color: string;
   brand_text_color?: string | null;
+  brand_customized?: boolean | null;
   status: string;
   currency: string;
   timezone: string;
