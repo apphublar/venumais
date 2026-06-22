@@ -5,7 +5,6 @@ import {
   getPublicStoreBySlug,
   listCustomerInstallmentsForPortal,
   listCustomerSalesForPortal,
-  listCustomerStoresForPortal,
   listPortalOrderConversations,
   listPortalOrders,
   listPublicProducts
@@ -110,7 +109,6 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   let products: Awaited<ReturnType<typeof listPublicProducts>> = [];
   let initialCustomer: Awaited<ReturnType<typeof getPortalCustomer>> = null;
-  let customerStoreCount = 0;
   let sessionHint: Awaited<ReturnType<typeof getClientSessionHint>> = null;
 
   try {
@@ -118,12 +116,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
     sessionHint = await getClientSessionHint(store.id);
 
     if (initialCustomer) {
-      const [storeProducts, stores] = await Promise.all([
-        listPublicProducts(store.id),
-        listCustomerStoresForPortal().catch(() => [])
-      ]);
-      products = storeProducts;
-      customerStoreCount = stores.length;
+      products = await listPublicProducts(store.id);
     }
   } catch {
     // Products failed to load — still render the portal with empty state
@@ -148,7 +141,6 @@ export default async function LojaPage({ params }: LojaPageProps) {
 
   return (
     <ClientPortalApp
-      customerStoreCount={customerStoreCount}
       initialConversations={initialConversations}
       initialCustomer={initialCustomer}
       initialInstallments={initialInstallments}

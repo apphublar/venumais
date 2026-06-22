@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { ClientStorePicker } from "@/components/client/client-store-picker";
 import { VendorIcon } from "@/components/vendor/icon";
 import { signInAction } from "@/lib/auth/actions";
@@ -116,7 +116,6 @@ export function AppLoginPage({
   const [clientSubStep, setClientSubStep] = useState<ClientSubStep>(
     customerStores.length ? "stores" : initialClientSubStep
   );
-  const [stores, setStores] = useState<PublicStore[]>(customerStores);
   const [slug, setSlug] = useState("");
   const [clientError, setClientError] = useState("");
   const [clientPending, setClientPending] = useState(false);
@@ -130,19 +129,13 @@ export function AppLoginPage({
 
   useAuthRedirect(state);
 
-  useEffect(() => {
-    if (clientSignInState.stores?.length) {
-      setStores(clientSignInState.stores);
-      setClientSubStep("stores");
-    }
-  }, [clientSignInState.stores]);
-
-  useEffect(() => {
-    if (customerStores.length) {
-      setStores(customerStores);
-      setClientSubStep("stores");
-    }
-  }, [customerStores]);
+  const stores = clientSignInState.stores?.length
+    ? clientSignInState.stores
+    : customerStores;
+  const visibleClientSubStep =
+    clientSignInState.stores?.length && clientSubStep === "login"
+      ? "stores"
+      : clientSubStep;
 
   const handleClientAccess = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -299,7 +292,7 @@ export function AppLoginPage({
     );
   }
 
-  if (clientSubStep === "stores") {
+  if (visibleClientSubStep === "stores") {
     return (
       <ClientStorePicker
         onBack={() => setClientSubStep(stores.length > 1 ? "login" : "link")}
@@ -308,7 +301,7 @@ export function AppLoginPage({
     );
   }
 
-  if (clientSubStep === "link") {
+  if (visibleClientSubStep === "link") {
     return (
       <main className="app-shell">
         <AppHero

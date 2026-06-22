@@ -41,7 +41,11 @@ export function ClientConfirmarCompra({
   ).padStart(4, "0")}.`;
 
   const contactSeller = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(supportMessage)}`, "_blank");
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(supportMessage)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const confirm = () => {

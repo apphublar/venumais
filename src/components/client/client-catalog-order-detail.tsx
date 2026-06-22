@@ -95,7 +95,6 @@ export function ClientCatalogOrderDetail({
   const cardFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLoading(true);
     getPortalOrderDetailForViewAction(storeId, initialOrder.id).then((res) => {
       if (res.order) setDetail(res.order);
       setLoading(false);

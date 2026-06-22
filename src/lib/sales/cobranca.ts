@@ -27,7 +27,6 @@ export function buildCobrancaMessage({
   dueDate,
   installmentAmount,
   installmentNumber,
-  saleCode,
   storeName
 }: CobrancaContext) {
   const diff = daysBetween(dueDate);

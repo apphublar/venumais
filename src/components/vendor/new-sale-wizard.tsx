@@ -1078,7 +1078,11 @@ function SucessoStep({
     const msg = isInstallment
       ? `Oi, ${firstName}! Registrei sua compra de ${formatBRL(result.total)} em ${result.installmentCount}x na ${storeName}. Confirme os detalhes no seu portal: ${portalUrl}`
       : `Oi, ${firstName}! Sua compra de ${formatBRL(result.total)} foi registrada na ${storeName}. Acesse seu portal: ${portalUrl}`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   return (

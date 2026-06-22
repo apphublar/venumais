@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
 import { VendorIcon } from "@/components/vendor/icon";
@@ -159,7 +160,15 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
 
         <div className="vendor-settings-brand-card">
           {logoPreviewUrl || logoUrl ? (
-            <img alt={`Logo da loja ${name}`} className="vendor-settings-logo-preview" src={logoPreviewUrl || logoUrl} />
+            <Image
+              alt={`Logo da loja ${name}`}
+              className="vendor-settings-logo-preview"
+              height={56}
+              loader={({ src }) => src}
+              src={logoPreviewUrl || logoUrl}
+              unoptimized
+              width={56}
+            />
           ) : (
             <VendorBrandMark label={name} onLight size={56} />
           )}

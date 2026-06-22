@@ -96,7 +96,11 @@ export function SaleDetailView({
     const phone = "55" + sale.customer.phone.replace(/\D/g, "");
     const portalUrl = `${window.location.origin}/loja/${store.slug}`;
     const msg = `Oi, ${firstName}! Sua compra na ${store.name} está aguardando confirmação. Acesse seu portal para revisar e confirmar: ${portalUrl}`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (

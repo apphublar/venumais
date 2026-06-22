@@ -17,12 +17,14 @@ create table if not exists public.store_coupons (
   updated_at timestamptz not null default timezone('utc', now()),
   constraint store_coupons_type_check check (type in ('percent', 'fixed')),
   constraint store_coupons_value_positive check (value > 0),
-  constraint store_coupons_code_length check (char_length(code) >= 3 and char_length(code) <= 30),
-  constraint store_coupons_unique_code unique (store_id, lower(code))
+  constraint store_coupons_code_length check (char_length(code) >= 3 and char_length(code) <= 30)
 );
 
 create index if not exists store_coupons_store_active_idx
   on public.store_coupons (store_id, active);
+
+create unique index if not exists store_coupons_unique_code_idx
+  on public.store_coupons (store_id, lower(code));
 
 alter table public.store_coupons enable row level security;
 
@@ -34,17 +36,18 @@ create policy "store_coupons_select"
 drop policy if exists "store_coupons_insert" on public.store_coupons;
 create policy "store_coupons_insert"
   on public.store_coupons for insert
-  with check (public.is_store_member(store_id));
+  with check (public.has_store_role(store_id, array['owner', 'admin']));
 
 drop policy if exists "store_coupons_update" on public.store_coupons;
 create policy "store_coupons_update"
   on public.store_coupons for update
-  using (public.is_store_member(store_id));
+  using (public.has_store_role(store_id, array['owner', 'admin']))
+  with check (public.has_store_role(store_id, array['owner', 'admin']));
 
 drop policy if exists "store_coupons_delete" on public.store_coupons;
 create policy "store_coupons_delete"
   on public.store_coupons for delete
-  using (public.is_store_member(store_id));
+  using (public.has_store_role(store_id, array['owner', 'admin']));
 
 grant select, insert, update, delete on public.store_coupons to authenticated;
 

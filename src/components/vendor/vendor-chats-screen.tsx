@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { VendorAvatar } from "@/components/vendor/avatar";
-import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";
 import type { OrderConversation } from "@/lib/client/queries";

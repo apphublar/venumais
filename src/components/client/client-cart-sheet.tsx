@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ClientCartInstallmentPlan } from "@/components/client/client-cart-installment-plan";
+import {
+  ClientCartInstallmentPlan,
+  createDefaultClientInstallments
+} from "@/components/client/client-cart-installment-plan";
 import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
@@ -110,12 +113,9 @@ export function ClientCartSheet({
 
   useEffect(() => {
     if (!couponCode.trim()) {
-      setValidatedCoupon(null);
-      setCouponPending(false);
       return;
     }
 
-    setCouponPending(true);
     const timer = window.setTimeout(async () => {
       const supabase = getSupabaseBrowserClient();
       const { data } = await supabase.rpc("validate_store_coupon", {
@@ -123,20 +123,43 @@ export function ClientCartSheet({
         p_code: couponCode.trim()
       });
       const row = Array.isArray(data) ? data[0] : data;
-      setValidatedCoupon(
-        row
-          ? {
-              code: String(row.code),
-              type: row.type as ValidatedCoupon["type"],
-              value: Number(row.value)
-            }
-          : null
-      );
+      const nextCoupon = row
+        ? {
+            code: String(row.code),
+            type: row.type as ValidatedCoupon["type"],
+            value: Number(row.value)
+          }
+        : null;
+      setValidatedCoupon(nextCoupon);
+      if (paymentMode === "installment") {
+        const nextDiscount = hasVisiblePrices
+          ? couponDiscount(nextCoupon, subtotal)
+          : 0;
+        setInstallments(createDefaultClientInstallments(subtotal - nextDiscount));
+      }
       setCouponPending(false);
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [couponCode, store.id]);
+  }, [couponCode, hasVisiblePrices, paymentMode, store.id, subtotal]);
+
+  const handleCouponCodeChange = (value: string) => {
+    const nextCode = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    setCouponCode(nextCode);
+    setValidatedCoupon(null);
+    setCouponPending(Boolean(nextCode));
+    if (!nextCode && paymentMode === "installment") {
+      setInstallments(createDefaultClientInstallments(subtotal));
+    }
+  };
+
+  const toggleInstallmentMode = () => {
+    const next = paymentMode === "installment" ? "cash" : "installment";
+    setPaymentMode(next);
+    setInstallments(
+      next === "installment" ? createDefaultClientInstallments(total) : []
+    );
+  };
 
   const removeItem = (lineKey: string) => {
     const next = { ...cart };
@@ -328,7 +351,7 @@ export function ClientCartSheet({
                           ? "client-cart-coupon-input client-cart-coupon-input-invalid"
                           : "client-cart-coupon-input"
                       }
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                      onChange={(e) => handleCouponCodeChange(e.target.value)}
                       placeholder="Cupom de desconto"
                       value={couponCode}
                     />
@@ -419,7 +442,7 @@ export function ClientCartSheet({
 
               <button
                 className={`client-cart-installment-toggle${paymentMode === "installment" ? " is-active" : ""}`}
-                onClick={() => setPaymentMode((current) => (current === "installment" ? "cash" : "installment"))}
+                onClick={toggleInstallmentMode}
                 type="button"
               >
                 <VendorIcon name="cards" size={18} />
@@ -431,7 +454,11 @@ export function ClientCartSheet({
 
               {paymentMode === "installment" ? (
                 <>
-                  <ClientCartInstallmentPlan onChange={handleInstallmentChange} total={total} />
+                  <ClientCartInstallmentPlan
+                    key={total}
+                    onChange={handleInstallmentChange}
+                    total={total}
+                  />
                   {paymentMethod === "card" ? (
                     <div className="client-cart-card-mode">
                       <p className="client-cart-section-label client-cart-section-label-normal">

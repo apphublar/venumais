@@ -372,6 +372,7 @@ export function ClientPedidos({
       {/* ── Overlay de detalhe do pedido do catálogo ── */}
       {selectedOrder ? (
         <ClientCatalogOrderDetail
+          key={selectedOrder.id}
           onClose={() => setSelectedOrder(null)}
           onEdit={() => {
             const orderId = selectedOrder.id;

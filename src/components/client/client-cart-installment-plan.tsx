@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { VendorIcon } from "@/components/vendor/icon";
 import { formatBRL } from "@/lib/products/format";
 import { addDays, splitInstallments, toISODate } from "@/lib/sales/format";
@@ -10,6 +10,14 @@ type InstallmentDraft = {
   due_date: string;
   amount: number;
 };
+
+export function createDefaultClientInstallments(total: number, count = 2) {
+  return buildDefaultInstallments(total, count).map((row, index) => ({
+    installment_number: index + 1,
+    due_date: row.due_date,
+    amount: row.amount
+  }));
+}
 
 function buildDefaultInstallments(total: number, count = 2): InstallmentDraft[] {
   const amounts = splitInstallments(total, count);
@@ -38,13 +46,6 @@ export function ClientCartInstallmentPlan({
       }))
     );
   };
-
-  useEffect(() => {
-    const nextRows = buildDefaultInstallments(total, 2);
-    setRows(nextRows);
-    emitChange(nextRows);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [total]);
 
   const sum = useMemo(() => rows.reduce((acc, row) => acc + row.amount, 0), [rows]);
 

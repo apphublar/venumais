@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";

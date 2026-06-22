@@ -55,7 +55,6 @@ export function ClientPortalApp({
   products,
   sessionHint = null,
   store,
-  customerStoreCount = 1
 }: {
   initialConversations?: OrderConversation[];
   initialCustomer: PortalCustomer | null;
@@ -69,7 +68,6 @@ export function ClientPortalApp({
     isLinked: boolean;
   } | null;
   store: PublicStore;
-  customerStoreCount?: number;
 }) {
   const [customer, setCustomer] = useState<ClientSessionCustomer | null>(initialCustomer);
   const [tab, setTab] = useState<ClientTab>("catalog");

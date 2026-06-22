@@ -6,7 +6,6 @@ import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSectionLabel } from "@/components/vendor/section-label";
 import { VendorWhatsLogo } from "@/components/vendor/whats-logo";
-import { getCustomerInitials, normalizePhone } from "@/lib/customers/format";
 import { formatCustomerAddress } from "@/lib/customers/address";
 import { formatBRL } from "@/lib/products/format";
 import {
@@ -47,10 +46,6 @@ export function CustomerDetailView({
 }) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const addressLabel = formatCustomerAddress(customer);
-  const whatsappHref = customer.phone
-    ? `https://wa.me/55${normalizePhone(customer.phone)}`
-    : undefined;
-
   return (
     <section className="vendor-screen-body">
       <VendorCard className="vendor-detail-metrics vendor-detail-metrics-single">

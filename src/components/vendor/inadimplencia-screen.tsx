@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorCard } from "@/components/vendor/card";
-import { VendorIcon } from "@/components/vendor/icon";
 import { CobrancaSheet } from "@/components/vendor/cobranca-sheet";
 import { VendorWhatsLogo } from "@/components/vendor/whats-logo";
 import { getCustomerInitials } from "@/lib/customers/format";
@@ -31,13 +30,6 @@ function daysBetween(dueDate: string) {
 
 function isOverdue(dueDate: string) {
   return daysBetween(dueDate) < 0;
-}
-
-function receivableStatusLabel(dueDate: string) {
-  const diff = daysBetween(dueDate);
-  if (diff < 0) return "overdue";
-  if (diff === 0) return "today";
-  return "open";
 }
 
 function daysLate(dueDate: string) {

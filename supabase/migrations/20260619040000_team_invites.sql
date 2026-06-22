@@ -32,12 +32,13 @@ create policy "store_invites_select"
 drop policy if exists "store_invites_insert" on public.store_invites;
 create policy "store_invites_insert"
   on public.store_invites for insert
-  with check (public.is_store_member(store_id));
+  with check (public.has_store_role(store_id, array['owner', 'admin']));
 
 drop policy if exists "store_invites_update" on public.store_invites;
 create policy "store_invites_update"
   on public.store_invites for update
-  using (public.is_store_member(store_id));
+  using (public.has_store_role(store_id, array['owner', 'admin']))
+  with check (public.has_store_role(store_id, array['owner', 'admin']));
 
 grant select, insert, update on public.store_invites to authenticated;
 

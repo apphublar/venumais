@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { VendorIcon } from "@/components/vendor/icon";
 
 export type OrderChatMessage = {
@@ -33,7 +33,7 @@ export function OrderChatPanel({
   const [pending, startTransition] = useTransition();
   const listRef = useRef<HTMLDivElement>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     const result = await loadMessages();
     if (result.error) {
       setError(result.error);
@@ -45,14 +45,16 @@ export function OrderChatPanel({
     if (markRead) {
       await markRead().catch(() => {});
     }
-  };
+  }, [loadMessages, markRead]);
 
   useEffect(() => {
-    refresh();
+    const initialTimer = window.setTimeout(refresh, 0);
     const timer = window.setInterval(refresh, 8000);
-    return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
+  }, [refresh]);
 
   useEffect(() => {
     const node = listRef.current;

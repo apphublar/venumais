@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorSaleRow } from "@/components/vendor/sale-row";
@@ -27,7 +26,10 @@ export function SalesHistory({ sales }: { sales: SaleWithRelations[] }) {
   const [ref, setRef] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
   const [status, setStatus] = useState<StatusFilter>("all");
 
-  const prevMonth = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  const prevMonth = useMemo(
+    () => new Date(ref.getFullYear(), ref.getMonth() - 1, 1),
+    [ref]
+  );
   const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const isFutureNext = new Date(ref.getFullYear(), ref.getMonth() + 1, 1) > curMonthStart;
 

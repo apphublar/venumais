@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
 
 export function StoreBrandLogo({
@@ -17,13 +18,15 @@ export function StoreBrandLogo({
 
   if (logoUrl?.trim()) {
     return (
-      <img
+      <Image
         alt={`Logo ${label}`}
         className="client-store-logo"
+        height={size}
+        loader={({ src }) => src}
         src={logoUrl}
+        unoptimized
+        width={size}
         style={{
-          width: size,
-          height: size,
           borderRadius: corner,
           objectFit: "cover",
           flexShrink: 0

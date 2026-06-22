@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { VendorBrandMark } from "@/components/vendor/brand-mark";
@@ -73,7 +74,15 @@ export function VendorDashboard({
       <div className="vendor-dashboard-top">
         <div className="vendor-dashboard-greeting">
           {store.logo_url ? (
-            <img alt={`Logo da loja ${storeName}`} className="vendor-dashboard-store-logo" src={store.logo_url} />
+            <Image
+              alt={`Logo da loja ${storeName}`}
+              className="vendor-dashboard-store-logo"
+              height={48}
+              loader={({ src }) => src}
+              src={store.logo_url}
+              unoptimized
+              width={48}
+            />
           ) : (
             <VendorBrandMark label={storeInitial} onLight size={48} />
           )}
