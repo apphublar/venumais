@@ -1,4 +1,5 @@
 import { ClientPortalApp } from "@/components/client/client-portal-app";
+import { ensurePortalCustomerForStore, getClientSessionHint } from "@/lib/client/link-store";
 import {
   getPortalCustomer,
   getPublicStoreBySlug,
@@ -110,14 +111,18 @@ export default async function LojaPage({ params }: LojaPageProps) {
   let products: Awaited<ReturnType<typeof listPublicProducts>> = [];
   let initialCustomer: Awaited<ReturnType<typeof getPortalCustomer>> = null;
   let customerStoreCount = 0;
+  let sessionHint: Awaited<ReturnType<typeof getClientSessionHint>> = null;
 
   try {
-    [products, initialCustomer] = await Promise.all([
-      listPublicProducts(store.id),
-      getPortalCustomer(store.id)
-    ]);
+    initialCustomer = await ensurePortalCustomerForStore(store.id);
+    sessionHint = await getClientSessionHint(store.id);
+
     if (initialCustomer) {
-      const stores = await listCustomerStoresForPortal().catch(() => []);
+      const [storeProducts, stores] = await Promise.all([
+        listPublicProducts(store.id),
+        listCustomerStoresForPortal().catch(() => [])
+      ]);
+      products = storeProducts;
       customerStoreCount = stores.length;
     }
   } catch {
@@ -151,6 +156,7 @@ export default async function LojaPage({ params }: LojaPageProps) {
       initialSales={initialSales}
       key={portalKey}
       products={products}
+      sessionHint={sessionHint}
       store={store}
     />
   );

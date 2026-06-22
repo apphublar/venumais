@@ -53,6 +53,7 @@ export function ClientPortalApp({
   initialOrders,
   initialSales,
   products,
+  sessionHint = null,
   store,
   customerStoreCount = 1
 }: {
@@ -62,11 +63,15 @@ export function ClientPortalApp({
   initialOrders: PortalOrder[];
   initialSales: PortalSaleSummary[];
   products: PublicProduct[];
+  sessionHint?: {
+    email: string;
+    canQuickLink: boolean;
+    isLinked: boolean;
+  } | null;
   store: PublicStore;
   customerStoreCount?: number;
 }) {
   const [customer, setCustomer] = useState<ClientSessionCustomer | null>(initialCustomer);
-  const [isDemo, setIsDemo] = useState(false);
   const [tab, setTab] = useState<ClientTab>("catalog");
   const orders = initialOrders;
   const sales = initialSales;
@@ -119,38 +124,20 @@ export function ClientPortalApp({
     });
   };
 
-  if (!customer && !isDemo) {
+  if (!customer) {
     return (
       <ClientAuth
         onEnter={(nextCustomer) => {
-          if (nextCustomer) {
-            setCustomer(nextCustomer);
-            setIsDemo(false);
-          } else {
-            setIsDemo(true);
-          }
+          setCustomer(nextCustomer);
+          router.refresh();
         }}
+        sessionHint={sessionHint}
         store={store}
       />
     );
   }
 
-  const profileCustomer: PortalCustomer =
-    customer ??
-    ({
-      id: "demo",
-      full_name: "Cliente demonstração",
-      phone: "",
-      email: null,
-      avatar_color: "#11885b",
-      address_postal_code: null,
-      address_street: null,
-      address_number: null,
-      address_complement: null,
-      address_neighborhood: null,
-      address_city: null,
-      address_state: null
-    } satisfies PortalCustomer);
+  const profileCustomer: PortalCustomer = customer;
 
   return (
     <div className="client-app">
@@ -162,14 +149,13 @@ export function ClientPortalApp({
         {tab === "catalog" ? (
           <ClientCatalog
             customer={customer}
-            isDemo={isDemo}
             onOpenAccount={() => setOverlay({ type: "conta" })}
             onOrderSubmitted={(message) => {
               showToast(message);
               setTab("orders");
               router.refresh();
             }}
-            onSwitchStore={customer && customerStoreCount > 1 ? switchStore : undefined}
+            onSwitchStore={switchStore}
             products={products}
             store={store}
           />
@@ -205,52 +191,51 @@ export function ClientPortalApp({
 
       {toast ? <div className="client-toast">{toast}</div> : null}
 
-      <nav aria-label="Navegação do cliente" className="client-bottom-nav">
+      <nav aria-label="Navegação do cliente" className="vendor-bottom-nav">
         {NAV_LEFT.map((item) => (
           <button
             aria-current={tab === item.id ? "page" : undefined}
-            className={`client-nav-button ${tab === item.id ? "client-nav-button-active" : ""}`}
+            className={`vendor-nav-button ${tab === item.id ? "vendor-nav-button-active" : ""}`}
             key={item.id}
             onClick={() => setTab(item.id)}
             type="button"
           >
-            <span className="client-nav-icon">
+            <span className="vendor-nav-icon">
               <VendorIcon name={item.icon} size={22} stroke={tab === item.id ? 2.3 : 1.9} />
             </span>
             <span>{item.label}</span>
           </button>
         ))}
 
-        <div className="client-fab-slot">
+        <div className="vendor-fab-slot">
           <button
             aria-current={tab === "orders" ? "page" : undefined}
             aria-label="Pedidos"
-            className={`client-fab ${tab === "orders" ? "client-fab-active" : ""}`}
+            className={`vendor-fab ${tab === "orders" ? "client-fab-active" : ""}`}
             onClick={() => setTab("orders")}
             type="button"
           >
             <VendorIcon name="receipt" size={26} />
             {pendingConfirmationCount > 0 ? (
-              <em className="client-fab-badge">{pendingConfirmationCount}</em>
+              <em className="vendor-nav-badge">{pendingConfirmationCount}</em>
             ) : null}
           </button>
-          <span className={`client-fab-label ${tab === "orders" ? "is-active" : ""}`}>Pedidos</span>
         </div>
 
         {NAV_RIGHT.map((item) => (
           <button
             aria-current={tab === item.id ? "page" : undefined}
-            className={`client-nav-button ${tab === item.id ? "client-nav-button-active" : ""}`}
+            className={`vendor-nav-button ${tab === item.id ? "vendor-nav-button-active" : ""}`}
             key={item.id}
             onClick={() => setTab(item.id)}
             type="button"
           >
-            <span className="client-nav-icon">
+            <span className="vendor-nav-icon">
               <VendorIcon name={item.icon} size={22} stroke={tab === item.id ? 2.3 : 1.9} />
             </span>
             <span>{item.label}</span>
             {item.id === "chat" && chatUnreadCount > 0 ? (
-              <em className="client-nav-badge">{chatUnreadCount}</em>
+              <em className="vendor-nav-badge">{chatUnreadCount}</em>
             ) : null}
           </button>
         ))}
@@ -266,7 +251,7 @@ export function ClientPortalApp({
           }}
           onToast={showToast}
           owedAmount={owedAmount}
-          onSwitchStore={customer && customerStoreCount > 1 ? switchStore : undefined}
+          onSwitchStore={switchStore}
           store={store}
         />
       ) : null}

@@ -24,8 +24,8 @@ export function ClientLojasTab({
         </div>
       </div>
 
-      <button className="vendor-button vendor-button-primary vendor-button-full" onClick={onSwitchStore} type="button">
-        <VendorIcon name="store" size={18} />
+      <button className="client-lojas-switch-btn" onClick={onSwitchStore} type="button">
+        <VendorIcon name="split" size={18} />
         Trocar de loja
       </button>
 

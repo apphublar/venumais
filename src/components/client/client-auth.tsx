@@ -1,16 +1,16 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { StoreBrandLogo } from "@/components/client/store-brand-logo";
 import { VendorIcon } from "@/components/vendor/icon";
 import {
   clientSignInAction,
   clientSignUpAction,
+  linkClientToStoreAction,
   type ClientSessionCustomer
 } from "@/lib/client/actions";
 import type { PublicStore } from "@/lib/client/queries";
-import { useState } from "react";
 
 function PasswordField({
   label,
@@ -45,15 +45,22 @@ function PasswordField({
 
 export function ClientAuth({
   onEnter,
+  sessionHint,
   store
 }: {
-  onEnter: (customer: ClientSessionCustomer | null) => void;
+  onEnter: (customer: ClientSessionCustomer) => void;
+  sessionHint?: {
+    email: string;
+    canQuickLink: boolean;
+    isLinked: boolean;
+  } | null;
   store: PublicStore;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
+  const [linkPending, startLinkTransition] = useTransition();
   const [signUpState, signUpAction, signUpPending] = useActionState(clientSignUpAction, {});
   const [signInState, signInAction, signInPending] = useActionState(clientSignInAction, {});
 
@@ -89,6 +96,20 @@ export function ClientAuth({
     setLocalError("");
   };
 
+  const handleQuickLink = () => {
+    setLocalError("");
+    startLinkTransition(async () => {
+      const result = await linkClientToStoreAction(store.id, store.slug);
+      if (result.error) {
+        setLocalError(result.error);
+        return;
+      }
+      if (result.customer) {
+        onEnter(result.customer);
+      }
+    });
+  };
+
   return (
     <div className="client-auth-page">
       <div className="client-auth-hero">
@@ -106,100 +127,137 @@ export function ClientAuth({
         </div>
         <strong className="client-auth-title">{store.name}</strong>
         <p className="client-auth-subtitle">
-          {mode === "signup"
-            ? "Crie sua conta para comprar e acompanhar seus pedidos e parcelas."
-            : "Acesse sua conta para continuar."}
+          {sessionHint?.canQuickLink
+            ? "Você já tem conta no VENUMAIS. Vincule-se a esta loja com um clique."
+            : mode === "signup"
+              ? "Crie sua conta para ver o catálogo, comprar e acompanhar pedidos."
+              : "Entre para ver o catálogo e continuar suas compras."}
         </p>
       </div>
 
       <div className="client-auth-body">
-        <div className="client-auth-toggle">
-          <button
-            className={mode === "signup" ? "is-active" : ""}
-            onClick={() => setMode("signup")}
-            type="button"
-          >
-            Criar conta
-          </button>
-          <button
-            className={mode === "login" ? "is-active" : ""}
-            onClick={() => setMode("login")}
-            type="button"
-          >
-            Entrar
-          </button>
-        </div>
+        {sessionHint?.canQuickLink ? (
+          <div className="client-auth-quick-link">
+            <p>
+              Logado como <strong>{sessionHint.email}</strong>
+            </p>
+            <button
+              className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full client-auth-submit"
+              disabled={linkPending}
+              onClick={handleQuickLink}
+              type="button"
+            >
+              <VendorIcon name="check" size={18} />
+              {linkPending ? "Vinculando…" : `Continuar em ${store.name}`}
+            </button>
+            <button
+              className="client-auth-switch-account"
+              onClick={() => router.push("/app?mode=client")}
+              type="button"
+            >
+              Usar outra conta
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="client-auth-toggle">
+              <button
+                className={mode === "signup" ? "is-active" : ""}
+                onClick={() => setMode("signup")}
+                type="button"
+              >
+                Criar conta
+              </button>
+              <button
+                className={mode === "login" ? "is-active" : ""}
+                onClick={() => setMode("login")}
+                type="button"
+              >
+                Entrar
+              </button>
+            </div>
 
-        <form action={mode === "signup" ? signUpAction : signInAction} onSubmit={submitValidation}>
-          <input name="storeId" type="hidden" value={store.id} />
-          <input name="storeSlug" type="hidden" value={store.slug} />
+            <form action={mode === "signup" ? signUpAction : signInAction} onSubmit={submitValidation}>
+              <input name="storeId" type="hidden" value={store.id} />
+              <input name="storeSlug" type="hidden" value={store.slug} />
 
-          {mode === "signup" ? (
-            <>
-              <label className="client-field">
-                <span>Nome completo *</span>
-                <input name="fullName" placeholder="Ex.: Ana Beatriz Ferreira" required />
-              </label>
-              <label className="client-field">
-                <span>Apelido</span>
-                <input name="nickname" placeholder="Como prefere ser chamada(o)" />
-              </label>
-              <label className="client-field">
-                <span>Email *</span>
-                <input name="email" placeholder="voce@email.com" required type="email" />
-              </label>
-              <label className="client-field">
-                <span>WhatsApp *</span>
-                <input name="phone" placeholder="(11) 90000-0000" required />
-              </label>
-              <PasswordField label="Senha *" name="password" placeholder="Mínimo 6 caracteres" />
-              <label className="client-field app-password-field">
-                <span>Confirmar senha *</span>
-                <div className="app-password-wrap">
-                  <input
-                    minLength={6}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    placeholder="Repita sua senha"
-                    required
-                    type="password"
-                    value={confirmPassword}
-                  />
-                </div>
-              </label>
-            </>
-          ) : (
-            <>
-              <label className="client-field">
-                <span>Email</span>
-                <input name="email" placeholder="voce@email.com" required type="email" />
-              </label>
-              <PasswordField label="Senha" name="password" placeholder="Sua senha" />
-              <a className="app-inline-link" href="/recuperar-senha" style={{ marginTop: -4 }}>
-                Esqueci minha senha
-              </a>
-            </>
-          )}
+              {mode === "signup" ? (
+                <>
+                  <label className="client-field">
+                    <span>Nome completo *</span>
+                    <input name="fullName" placeholder="Ex.: Ana Beatriz Ferreira" required />
+                  </label>
+                  <label className="client-field">
+                    <span>Apelido</span>
+                    <input name="nickname" placeholder="Como prefere ser chamada(o)" />
+                  </label>
+                  <label className="client-field">
+                    <span>Email *</span>
+                    <input
+                      defaultValue={sessionHint?.email ?? ""}
+                      name="email"
+                      placeholder="voce@email.com"
+                      readOnly={Boolean(sessionHint?.email)}
+                      required
+                      type="email"
+                    />
+                  </label>
+                  <label className="client-field">
+                    <span>WhatsApp *</span>
+                    <input name="phone" placeholder="(11) 90000-0000" required />
+                  </label>
+                  <PasswordField label="Senha *" name="password" placeholder="Mínimo 6 caracteres" />
+                  <label className="client-field app-password-field">
+                    <span>Confirmar senha *</span>
+                    <div className="app-password-wrap">
+                      <input
+                        minLength={6}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        placeholder="Repita sua senha"
+                        required
+                        type="password"
+                        value={confirmPassword}
+                      />
+                    </div>
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label className="client-field">
+                    <span>Email</span>
+                    <input
+                      defaultValue={sessionHint?.email ?? ""}
+                      name="email"
+                      placeholder="voce@email.com"
+                      required
+                      type="email"
+                    />
+                  </label>
+                  <PasswordField label="Senha" name="password" placeholder="Sua senha" />
+                  <a className="app-inline-link" href="/recuperar-senha" style={{ marginTop: -4 }}>
+                    Esqueci minha senha
+                  </a>
+                </>
+              )}
 
-          {localError ? <p className="client-auth-error">{localError}</p> : null}
-          {activeState.error ? <p className="client-auth-error">{activeState.error}</p> : null}
+              {localError ? <p className="client-auth-error">{localError}</p> : null}
+              {activeState.error ? <p className="client-auth-error">{activeState.error}</p> : null}
 
-          <button
-            className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full client-auth-submit"
-            disabled={pending}
-            type="submit"
-          >
-            <VendorIcon name="check" size={18} />
-            {pending
-              ? "Aguarde…"
-              : mode === "signup"
-                ? "Criar conta e entrar"
-                : "Entrar"}
-          </button>
-        </form>
-
-        <button className="client-auth-demo-link" onClick={() => onEnter(null)} type="button">
-          Entrar em modo demonstração
-        </button>
+              <button
+                className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full client-auth-submit"
+                disabled={pending}
+                type="submit"
+              >
+                <VendorIcon name="check" size={18} />
+                {pending
+                  ? "Aguarde…"
+                  : mode === "signup"
+                    ? "Criar conta e entrar"
+                    : "Entrar"}
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

@@ -42,7 +42,7 @@ export function ClientStorePicker({
       </div>
 
       <section className="client-store-picker-body">
-        <div className="client-search client-store-picker-search">
+        <div className="vendor-search">
           <VendorIcon name="search" size={18} />
           <input
             onChange={(event) => setQuery(event.target.value)}
@@ -51,7 +51,12 @@ export function ClientStorePicker({
             value={query}
           />
           {query ? (
-            <button aria-label="Limpar busca" onClick={() => setQuery("")} type="button">
+            <button
+              aria-label="Limpar busca"
+              className="vendor-search-clear"
+              onClick={() => setQuery("")}
+              type="button"
+            >
               <VendorIcon name="x" size={13} />
             </button>
           ) : null}

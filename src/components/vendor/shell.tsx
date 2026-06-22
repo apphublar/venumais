@@ -13,7 +13,13 @@ const NAV_ITEMS = [
 ];
 const VIEW_MODE_KEY = "venumais-vendor-view-mode";
 
-export function VendorShell({ children }: { children: React.ReactNode }) {
+export function VendorShell({
+  chatUnreadCount = 0,
+  children
+}: {
+  chatUnreadCount?: number;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [viewMode, setViewMode] = useState<"desktop" | "mobile">(() => {
@@ -94,7 +100,12 @@ export function VendorShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {NAV_ITEMS.slice(2).map((item) => (
-            <VendorNavButton item={item} key={item.href} pathname={pathname} />
+            <VendorNavButton
+              chatUnreadCount={item.href === "/painel/clientes" ? chatUnreadCount : 0}
+              item={item}
+              key={item.href}
+              pathname={pathname}
+            />
           ))}
         </nav>
       ) : null}
@@ -103,9 +114,11 @@ export function VendorShell({ children }: { children: React.ReactNode }) {
 }
 
 function VendorNavButton({
+  chatUnreadCount = 0,
   item,
   pathname
 }: {
+  chatUnreadCount?: number;
   item: (typeof NAV_ITEMS)[number];
   pathname: string;
 }) {
@@ -121,6 +134,7 @@ function VendorNavButton({
         <VendorIcon name={item.icon} size={22} stroke={active ? 2.3 : 1.9} />
       </span>
       <span>{item.label}</span>
+      {chatUnreadCount > 0 ? <em className="vendor-nav-badge">{chatUnreadCount}</em> : null}
     </Link>
   );
 }

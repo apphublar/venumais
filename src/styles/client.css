@@ -2819,6 +2819,53 @@
   margin: 0 16px;
 }
 
+.client-lojas-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 32px);
+  max-width: calc(100% - 32px);
+  margin: 0 16px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border: 1px solid var(--client-line);
+  border-radius: 14px;
+  background: var(--client-card);
+  color: var(--client-ink-1);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.client-auth-quick-link {
+  display: grid;
+  gap: 12px;
+}
+
+.client-auth-quick-link p {
+  margin: 0;
+  color: var(--client-ink-2);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.client-auth-switch-account {
+  border: none;
+  background: none;
+  color: var(--client-green-700);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.client-fab-active {
+  box-shadow: 0 8px 22px rgba(18, 138, 93, 0.48);
+}
+
 .client-lojas-hint {
   margin: 14px 16px 0;
   color: var(--client-ink-3);

@@ -30,7 +30,6 @@ function stockLabel(product: PublicProduct) {
 
 export function ClientCatalog({
   customer,
-  isDemo,
   onOpenAccount,
   onOrderSubmitted,
   onSwitchStore,
@@ -38,7 +37,6 @@ export function ClientCatalog({
   store
 }: {
   customer: ClientSessionCustomer | null;
-  isDemo?: boolean;
   onOpenAccount?: () => void;
   onOrderSubmitted: (message: string) => void;
   onSwitchStore?: () => void;
@@ -350,7 +348,7 @@ export function ClientCatalog({
         <ClientCartSheet
           cart={cart}
           customer={customer}
-          customerId={isDemo ? null : customer?.id ?? null}
+          customerId={customer?.id ?? null}
           onClose={() => setCartOpen(false)}
           onSubmitted={onOrderSubmitted}
           products={products}

@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { pickAvatarColor, normalizePhone } from "@/lib/customers/format";
+import {
+  getClientProfileFromUser,
+  registerClientForStore
+} from "@/lib/client/link-store";
 import { getCustomerSaleForPortal, getPortalOrderForEdit, listCustomerStoresForPortal, type PublicStore } from "@/lib/client/queries";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -85,7 +89,7 @@ function clientAuthError(message: string) {
   }
 
   if (normalized.includes("cliente não vinculado")) {
-    return "Conta sem cadastro nesta loja. Crie sua conta primeiro.";
+    return "Faça login com sua conta. Vamos vincular você a esta loja automaticamente.";
   }
 
   if (normalized.includes("pagamentos em aberto") || normalized.includes("quite suas parcelas")) {
@@ -175,50 +179,78 @@ export async function clientSignUpAction(
   });
 
   if (error) {
-    return { error: clientAuthError(error.message) };
-  }
+    const alreadyRegistered =
+      error.message.toLowerCase().includes("already registered") ||
+      error.message.toLowerCase().includes("user already registered");
 
-  if (data.user && !data.session) {
+    if (alreadyRegistered) {
+      const signIn = await supabase.auth.signInWithPassword({ email, password });
+      if (signIn.error) {
+        return { error: clientAuthError(signIn.error.message) };
+      }
+    } else {
+      return { error: clientAuthError(error.message) };
+    }
+  } else if (data.user && !data.session) {
     return {
       error: "Conta criada. Confirme seu email e faça login para continuar."
     };
   }
 
   const avatarColor = pickAvatarColor(fullName.length);
-  const { data: customerId, error: registerError } = await supabase.rpc(
-    "register_client_for_store",
-    {
-      p_store_id: storeId,
-      p_full_name: fullName,
-      p_phone: phone,
-      p_email: email,
-      p_avatar_color: avatarColor
-    }
-  );
+  const { error: registerError } = await registerClientForStore(storeId, {
+    fullName,
+    phone,
+    email,
+    avatarColor
+  });
 
   if (registerError) {
-    return { error: clientAuthError(registerError.message) };
+    return { error: clientAuthError(registerError) };
   }
 
   const customer = await loadCustomerForStore(storeId);
 
   if (!customer) {
+    return { error: "Não foi possível vincular sua conta a esta loja." };
+  }
+
+  revalidatePath(`/loja/${storeSlug}`);
+  return { customer };
+}
+
+export async function linkClientToStoreAction(
+  storeId: string,
+  storeSlug: string
+): Promise<ClientActionState> {
+  if (!storeId) {
+    return { error: "Loja inválida." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Faça login para continuar." };
+  }
+
+  const profile = await getClientProfileFromUser(supabase, user);
+  if (profile.phone.length < 8) {
     return {
-      customer: {
-        id: String(customerId),
-        full_name: fullName,
-        phone,
-        email,
-        avatar_color: avatarColor,
-        address_postal_code: null,
-        address_street: null,
-        address_number: null,
-        address_complement: null,
-        address_neighborhood: null,
-        address_city: null,
-        address_state: null
-      }
+      error: "Complete seu cadastro em uma loja antes de vincular outra conta."
     };
+  }
+
+  const { error: registerError } = await registerClientForStore(storeId, profile);
+  if (registerError) {
+    return { error: clientAuthError(registerError) };
+  }
+
+  const customer = await loadCustomerForStore(storeId);
+  if (!customer) {
+    return { error: "Não foi possível vincular sua conta a esta loja." };
   }
 
   revalidatePath(`/loja/${storeSlug}`);
@@ -276,7 +308,32 @@ export async function clientSignInAction(
     return { error: clientAuthError(error.message) };
   }
 
-  const customer = await loadCustomerForStore(storeId);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Sessão inválida. Tente novamente." };
+  }
+
+  let customer = await loadCustomerForStore(storeId);
+
+  if (!customer) {
+    const profile = await getClientProfileFromUser(supabase, user);
+
+    if (profile.phone.length >= 8) {
+      const { error: registerError } = await registerClientForStore(storeId, {
+        ...profile,
+        email: profile.email || email
+      });
+
+      if (registerError) {
+        return { error: clientAuthError(registerError) };
+      }
+
+      customer = await loadCustomerForStore(storeId);
+    }
+  }
 
   if (!customer) {
     return { error: clientAuthError("Cliente não vinculado à loja.") };
