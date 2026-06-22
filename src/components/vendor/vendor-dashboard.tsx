@@ -20,6 +20,7 @@ const NOTIF_SEEN_KEY = "venumais-notif-seen";
 const DEMO_UNREAD_DEFAULT = 3; // matches DEMO_NOTIFICATIONS unread count
 
 export function VendorDashboard({
+  chatUnreadCount = 0,
   cobrancaInstallments,
   data,
   isSeller,
@@ -28,6 +29,7 @@ export function VendorDashboard({
   storeInitial,
   storeName
 }: {
+  chatUnreadCount?: number;
   cobrancaInstallments: ReceivableInstallment[];
   data: DashboardData;
   isSeller: boolean;
@@ -192,6 +194,22 @@ export function VendorDashboard({
             A receber <VendorIcon name="chevR" size={14} />
           </Link>
         </div>
+
+        <Link href="/painel/chats">
+          <VendorCard className={`vendor-dashboard-chat${chatUnreadCount ? " vendor-dashboard-chat-unread" : ""}`}>
+            <div className="vendor-dashboard-chat-icon">
+              <VendorIcon name="message" size={22} />
+            </div>
+            <div>
+              <strong>
+                Chats com clientes
+                {chatUnreadCount ? ` · ${chatUnreadCount} nova${chatUnreadCount !== 1 ? "s" : ""}` : ""}
+              </strong>
+              <span>Veja todas as conversas abertas e mensagens recebidas</span>
+            </div>
+            <VendorIcon name="chevR" size={20} />
+          </VendorCard>
+        </Link>
 
         {receivables.overdue > 0 ? (
           <Link href="/painel/inadimplencia">

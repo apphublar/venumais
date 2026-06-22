@@ -256,3 +256,32 @@ export async function markVendorOrderMessagesReadAction(storeId: string, orderId
     p_order_id: orderId
   });
 }
+
+export async function listVendorOrderConversationsAction(storeId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_order_conversations_for_vendor", {
+    p_store_id: storeId
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {
+    conversations: ((data ?? []) as Array<{
+      order_id: string;
+      order_code: number;
+      customer_id: string;
+      customer_name: string;
+      customer_phone: string;
+      status: string;
+      last_message_body: string | null;
+      last_message_at: string | null;
+      last_sender_type: string | null;
+      unread_count: number;
+    }>).map((row) => ({
+      ...row,
+      unread_count: Number(row.unread_count)
+    }))
+  };
+}

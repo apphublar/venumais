@@ -5,6 +5,7 @@ import {
   listCustomerInstallmentsForPortal,
   listCustomerSalesForPortal,
   listCustomerStoresForPortal,
+  listPortalOrderConversations,
   listPortalOrders,
   listPublicProducts
 } from "@/lib/client/queries";
@@ -123,24 +124,27 @@ export default async function LojaPage({ params }: LojaPageProps) {
     // Products failed to load — still render the portal with empty state
   }
 
-  const [initialOrders, initialSales, initialInstallments] = initialCustomer
+  const [initialOrders, initialSales, initialInstallments, initialConversations] = initialCustomer
     ? await Promise.all([
         listPortalOrders(store.id).catch(() => []),
         listCustomerSalesForPortal(store.id).catch(() => []),
-        listCustomerInstallmentsForPortal(store.id).catch(() => [])
+        listCustomerInstallmentsForPortal(store.id).catch(() => []),
+        listPortalOrderConversations(store.id).catch(() => [])
       ])
-    : [[], [], []];
+    : [[], [], [], []];
   const portalKey = [
     store.id,
     initialCustomer?.id ?? "guest",
     initialOrders.length,
     initialSales.length,
-    initialInstallments.length
+    initialInstallments.length,
+    initialConversations.length
   ].join(":");
 
   return (
     <ClientPortalApp
       customerStoreCount={customerStoreCount}
+      initialConversations={initialConversations}
       initialCustomer={initialCustomer}
       initialInstallments={initialInstallments}
       initialOrders={initialOrders}

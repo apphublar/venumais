@@ -22,6 +22,12 @@ export function VendorMenuSheet({
 
   const items = [
     {
+      href: "/painel/chats",
+      icon: "message" as const,
+      sub: "Conversas com clientes sobre pedidos",
+      title: "Chats"
+    },
+    {
       disabled: !isOwner,
       href: isOwner ? "/painel/equipe" : undefined,
       icon: "users" as const,

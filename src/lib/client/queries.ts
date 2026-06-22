@@ -456,3 +456,48 @@ export async function listCancelledStoreOrders(storeId: string) {
     item_count: Number(row.item_count)
   }));
 }
+
+export type OrderConversation = {
+  order_id: string;
+  order_code: number;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  status: string;
+  last_message_body: string | null;
+  last_message_at: string | null;
+  last_sender_type: string | null;
+  unread_count: number;
+};
+
+export async function listVendorOrderConversations(storeId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_order_conversations_for_vendor", {
+    p_store_id: storeId
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as OrderConversation[]).map((row) => ({
+    ...row,
+    unread_count: Number(row.unread_count)
+  }));
+}
+
+export async function listPortalOrderConversations(storeId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_order_conversations_for_portal", {
+    p_store_id: storeId
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as OrderConversation[]).map((row) => ({
+    ...row,
+    unread_count: Number(row.unread_count)
+  }));
+}

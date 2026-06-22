@@ -119,7 +119,7 @@ export function OrderChatPanel({
           onClick={handleSend}
           type="button"
         >
-          <VendorIcon name="share" size={18} />
+          <VendorIcon name="send" size={18} />
         </button>
       </div>
     </div>

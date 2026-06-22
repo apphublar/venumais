@@ -4,15 +4,18 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ClientAuth } from "@/components/client/client-auth";
 import { ClientCatalog } from "@/components/client/client-catalog";
+import { ClientChats } from "@/components/client/client-chats";
 import { ClientConfirmarCompra } from "@/components/client/client-confirmar-compra";
 import { ClientConta } from "@/components/client/client-conta";
 import { ClientInformarPagamento } from "@/components/client/client-informar-pagamento";
+import { ClientLojasTab } from "@/components/client/client-lojas-tab";
 import { ClientParcelas } from "@/components/client/client-parcelas";
 import { ClientPedidos } from "@/components/client/client-pedidos";
 import { VendorIcon } from "@/components/vendor/icon";
 import { getCustomerSaleDetailAction } from "@/lib/client/actions";
 import type { ClientSessionCustomer } from "@/lib/client/actions";
 import type {
+  OrderConversation,
   PortalCustomer,
   PortalInstallment,
   PortalOrder,
@@ -22,13 +25,20 @@ import type {
   PublicStore
 } from "@/lib/client/queries";
 
-const TABS = [
-  { id: "catalog", icon: "box" as const, label: "Catálogo" },
-  { id: "orders", icon: "receipt" as const, label: "Pedidos" },
+const NAV_LEFT = [
+  { id: "stores", icon: "store" as const, label: "Lojas" },
+  { id: "catalog", icon: "box" as const, label: "Catálogo" }
+] as const;
+
+const NAV_RIGHT = [
+  { id: "chat", icon: "message" as const, label: "Chat" },
   { id: "pay", icon: "wallet" as const, label: "Parcelas" }
 ] as const;
 
-type ClientTab = (typeof TABS)[number]["id"];
+type ClientTab =
+  | (typeof NAV_LEFT)[number]["id"]
+  | "orders"
+  | (typeof NAV_RIGHT)[number]["id"];
 
 type ClientOverlay =
   | { type: "conta" }
@@ -37,6 +47,7 @@ type ClientOverlay =
   | null;
 
 export function ClientPortalApp({
+  initialConversations = [],
   initialCustomer,
   initialInstallments,
   initialOrders,
@@ -45,6 +56,7 @@ export function ClientPortalApp({
   store,
   customerStoreCount = 1
 }: {
+  initialConversations?: OrderConversation[];
   initialCustomer: PortalCustomer | null;
   initialInstallments: PortalInstallment[];
   initialOrders: PortalOrder[];
@@ -70,6 +82,11 @@ export function ClientPortalApp({
         (sale) => sale.payment_mode === "installment" && sale.confirmation_status === "pending"
       ).length,
     [sales]
+  );
+
+  const chatUnreadCount = useMemo(
+    () => initialConversations.reduce((total, row) => total + row.unread_count, 0),
+    [initialConversations]
   );
 
   const owedAmount = useMemo(
@@ -138,6 +155,10 @@ export function ClientPortalApp({
   return (
     <div className="client-app">
       <div className="client-app-scroll">
+        {tab === "stores" ? (
+          <ClientLojasTab currentStore={store} onSwitchStore={switchStore} />
+        ) : null}
+
         {tab === "catalog" ? (
           <ClientCatalog
             customer={customer}
@@ -166,6 +187,14 @@ export function ClientPortalApp({
           />
         ) : null}
 
+        {tab === "chat" ? (
+          <ClientChats
+            conversations={initialConversations}
+            store={store}
+            storeId={store.id}
+          />
+        ) : null}
+
         {tab === "pay" ? (
           <ClientParcelas
             installments={installments}
@@ -177,8 +206,9 @@ export function ClientPortalApp({
       {toast ? <div className="client-toast">{toast}</div> : null}
 
       <nav aria-label="Navegação do cliente" className="client-bottom-nav">
-        {TABS.map((item) => (
+        {NAV_LEFT.map((item) => (
           <button
+            aria-current={tab === item.id ? "page" : undefined}
             className={`client-nav-button ${tab === item.id ? "client-nav-button-active" : ""}`}
             key={item.id}
             onClick={() => setTab(item.id)}
@@ -188,8 +218,39 @@ export function ClientPortalApp({
               <VendorIcon name={item.icon} size={22} stroke={tab === item.id ? 2.3 : 1.9} />
             </span>
             <span>{item.label}</span>
-            {item.id === "orders" && pendingConfirmationCount > 0 ? (
-              <em className="client-nav-badge">{pendingConfirmationCount}</em>
+          </button>
+        ))}
+
+        <div className="client-fab-slot">
+          <button
+            aria-current={tab === "orders" ? "page" : undefined}
+            aria-label="Pedidos"
+            className={`client-fab ${tab === "orders" ? "client-fab-active" : ""}`}
+            onClick={() => setTab("orders")}
+            type="button"
+          >
+            <VendorIcon name="receipt" size={26} />
+            {pendingConfirmationCount > 0 ? (
+              <em className="client-fab-badge">{pendingConfirmationCount}</em>
+            ) : null}
+          </button>
+          <span className={`client-fab-label ${tab === "orders" ? "is-active" : ""}`}>Pedidos</span>
+        </div>
+
+        {NAV_RIGHT.map((item) => (
+          <button
+            aria-current={tab === item.id ? "page" : undefined}
+            className={`client-nav-button ${tab === item.id ? "client-nav-button-active" : ""}`}
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            type="button"
+          >
+            <span className="client-nav-icon">
+              <VendorIcon name={item.icon} size={22} stroke={tab === item.id ? 2.3 : 1.9} />
+            </span>
+            <span>{item.label}</span>
+            {item.id === "chat" && chatUnreadCount > 0 ? (
+              <em className="client-nav-badge">{chatUnreadCount}</em>
             ) : null}
           </button>
         ))}

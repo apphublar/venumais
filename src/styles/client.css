@@ -35,6 +35,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .client-main {
@@ -51,6 +52,8 @@
   transform: translateX(-50%);
   width: min(480px, 100%);
   display: flex;
+  align-items: flex-end;
+  gap: 2px;
   padding: 6px 4px 8px;
   background: var(--client-card);
   border-top: 1px solid var(--client-line);
@@ -2684,4 +2687,132 @@
 
 .client-order-chat-toggle.is-open {
   margin-bottom: 10px;
+}
+
+.client-fab-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.client-fab {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  margin-top: -24px;
+  border: 4px solid var(--client-card);
+  border-radius: 18px;
+  background: var(--client-green-600);
+  color: var(--client-brand-on);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 18px rgba(18, 138, 93, 0.4);
+  cursor: pointer;
+}
+
+.client-fab-active {
+  box-shadow: 0 8px 22px rgba(18, 138, 93, 0.48);
+}
+
+.client-fab-label {
+  color: var(--client-ink-3);
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.client-fab-label.is-active {
+  color: var(--client-green-700);
+  font-weight: 800;
+}
+
+.client-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+.client-chats-screen {
+  padding: 8px 16px 24px;
+}
+
+.client-chats-filter {
+  border-color: var(--client-line);
+  background: var(--client-card);
+  color: var(--client-ink-2);
+}
+
+.client-chats-filter.is-active {
+  border-color: #c7ead8;
+  background: var(--client-green-50);
+  color: var(--client-green-700);
+}
+
+.client-chat-row-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--client-green-50);
+  color: var(--client-green-700);
+  flex-shrink: 0;
+}
+
+.client-chat-thread-body {
+  padding: 8px 16px 24px;
+}
+
+.client-lojas-tab {
+  padding-bottom: 24px;
+}
+
+.client-lojas-current {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 16px 16px;
+  padding: 16px;
+  border: 1px solid var(--client-line);
+  border-radius: 16px;
+  background: var(--client-card);
+}
+
+.client-lojas-current strong,
+.client-lojas-current span {
+  display: block;
+}
+
+.client-lojas-current strong {
+  font-size: 1rem;
+}
+
+.client-lojas-current span {
+  margin-top: 2px;
+  color: var(--client-ink-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.client-lojas-tab .vendor-button {
+  margin: 0 16px;
+}
+
+.client-lojas-hint {
+  margin: 14px 16px 0;
+  color: var(--client-ink-3);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }

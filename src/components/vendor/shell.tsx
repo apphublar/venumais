@@ -54,6 +54,7 @@ export function VendorShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/painel/cupons") ||
     pathname.startsWith("/painel/equipe") ||
     pathname.startsWith("/painel/aniversariantes") ||
+    pathname.startsWith("/painel/chats/") ||
     pathname.startsWith("/painel/configuracoes") ||
     pathname.startsWith("/painel/estoque/baixo") ||
     pathname.startsWith("/painel/clientes/novo") ||

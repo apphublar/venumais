@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { OrderChatPanel } from "@/components/shared/order-chat-panel";
 import { VendorCard } from "@/components/vendor/card";
@@ -28,7 +27,6 @@ export function VendorOrderCustomerPanel({
   const phoneDigits = customer.phone ? normalizePhone(customer.phone) : "";
   const whatsappHref = phoneDigits ? `https://wa.me/55${phoneDigits}` : undefined;
   const telHref = phoneDigits ? `tel:+55${phoneDigits}` : undefined;
-  const mailHref = customer.email ? `mailto:${customer.email}` : undefined;
 
   return (
     <section className="vendor-order-customer-panel">
@@ -46,59 +44,46 @@ export function VendorOrderCustomerPanel({
 
       {open ? (
         <VendorCard className="vendor-order-customer-card">
-          <div className="vendor-order-customer-grid">
-            <div>
-              <span>Nome</span>
-              <strong>{customer.full_name}</strong>
+          <dl className="vendor-order-customer-fields">
+            <div className="vendor-order-customer-field">
+              <dt>Nome</dt>
+              <dd>{customer.full_name}</dd>
             </div>
-            <div>
-              <span>WhatsApp / telefone</span>
-              <strong>{customer.phone ? formatPhoneDisplay(customer.phone) : "Não informado"}</strong>
+            <div className="vendor-order-customer-field">
+              <dt>WhatsApp / telefone</dt>
+              <dd>{customer.phone ? formatPhoneDisplay(customer.phone) : "Não informado"}</dd>
             </div>
-            <div>
-              <span>Email</span>
-              <strong>{customer.email?.trim() || "Não informado"}</strong>
+            <div className="vendor-order-customer-field">
+              <dt>Email</dt>
+              <dd>{customer.email?.trim() || "Não informado"}</dd>
             </div>
-            <div>
-              <span>Endereço de entrega</span>
-              <strong>{address || "Não cadastrado"}</strong>
+            <div className="vendor-order-customer-field">
+              <dt>Endereço de entrega</dt>
+              <dd>{address || "Não cadastrado"}</dd>
             </div>
-          </div>
+          </dl>
 
-          <div className="vendor-order-customer-actions">
-            {mailHref ? (
-              <a className="vendor-button vendor-button-ghost" href={mailHref}>
-                <VendorIcon name="mail" size={16} />
-                Enviar email
-              </a>
-            ) : (
-              <button className="vendor-button vendor-button-ghost" disabled type="button">
-                <VendorIcon name="mail" size={16} />
-                Email indisponível
-              </button>
-            )}
-            {whatsappHref ? (
-              <a
-                className="vendor-button vendor-button-ghost vendor-button-whats"
-                href={whatsappHref}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <VendorWhatsLogo size={16} />
-                WhatsApp
-              </a>
-            ) : null}
-            {telHref ? (
-              <a className="vendor-button vendor-button-ghost" href={telHref}>
-                <VendorIcon name="phone" size={16} />
-                Ligar
-              </a>
-            ) : null}
-            <Link className="vendor-button vendor-button-ghost" href={`/painel/clientes/${customer.id}`}>
-              <VendorIcon name="users" size={16} />
-              Ver cadastro
-            </Link>
-          </div>
+          {(telHref || whatsappHref) ? (
+            <div className="vendor-order-customer-actions">
+              {telHref ? (
+                <a className="vendor-button vendor-button-ghost vendor-order-customer-action" href={telHref}>
+                  <VendorIcon name="phone" size={16} />
+                  Ligar
+                </a>
+              ) : null}
+              {whatsappHref ? (
+                <a
+                  className="vendor-button vendor-button-whats vendor-order-customer-action"
+                  href={whatsappHref}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <VendorWhatsLogo size={16} />
+                  WhatsApp
+                </a>
+              ) : null}
+            </div>
+          ) : null}
 
           <button
             className={`vendor-order-customer-chat-toggle${chatOpen ? " is-open" : ""}`}
