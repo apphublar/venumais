@@ -4,7 +4,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   experimental: {
-    typedEnv: true
+    typedEnv: true,
+    serverActions: {
+      bodySizeLimit: "4mb"
+    }
   },
   async headers() {
     return [

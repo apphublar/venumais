@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useAuthRedirect } from "@/components/auth/use-auth-redirect";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
@@ -8,6 +8,7 @@ import { VendorBottomBar } from "@/components/vendor/vendor-bottom-bar";
 import { VendorFormShell } from "@/components/vendor/vendor-form-shell";
 import { VendorToggle } from "@/components/vendor/vendor-toggle";
 import type { ProductActionState } from "@/lib/products/actions";
+import { uploadProductImageAction } from "@/lib/products/actions";
 import { formatBRL, formatVariations, parseBRL } from "@/lib/products/format";
 import type { Product } from "@/lib/database/types";
 
@@ -33,7 +34,9 @@ export function ProductForm({
 }: ProductFormProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(product?.image_url ?? null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoCleared, setPhotoCleared] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [name, setName] = useState(product?.name ?? "");
   const [category, setCategory] = useState(product?.category ?? "");
   const [cost, setCost] = useState(product ? String(product.cost).replace(".", ",") : "");
@@ -83,8 +86,17 @@ export function ProductForm({
     action,
     {}
   );
+  const [uploadPending, startUploadTransition] = useTransition();
 
   useAuthRedirect(state);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
 
   const margin = useMemo(() => {
     const costValue = parseBRL(cost);
@@ -117,19 +129,70 @@ export function ProductForm({
       return;
     }
 
+    if (file.size > 3 * 1024 * 1024) {
+      setPhotoError("A foto deve ter no máximo 3MB.");
+      setPhotoFile(null);
+      if (fileRef.current) {
+        fileRef.current.value = "";
+      }
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/svg+xml"].includes(file.type)) {
+      setPhotoError("Formato inválido. Envie PNG, JPG, WEBP ou SVG.");
+      setPhotoFile(null);
+      if (fileRef.current) {
+        fileRef.current.value = "";
+      }
+      return;
+    }
+
+    setPhotoError(null);
     setPhotoCleared(false);
-    const reader = new FileReader();
-    reader.onload = () => setPhotoPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    setPhotoFile(file);
+    if (photoPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    setPhotoPreview(URL.createObjectURL(file));
   }
 
   function removePhoto() {
+    if (photoPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreview);
+    }
     setPhotoPreview(null);
+    setPhotoFile(null);
     setPhotoCleared(Boolean(product?.image_url));
+    setPhotoError(null);
     if (fileRef.current) {
       fileRef.current.value = "";
     }
   }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+
+    startUploadTransition(async () => {
+      setPhotoError(null);
+      const formData = new FormData(form);
+
+      if (photoFile) {
+        const upload = await uploadProductImageAction(photoFile);
+        if (upload.error || !upload.url) {
+          setPhotoError(upload.error ?? "Não foi possível enviar a foto.");
+          return;
+        }
+        formData.set("imageUrl", upload.url);
+      } else if (photoCleared) {
+        formData.set("clearImage", "on");
+      }
+
+      formAction(formData);
+    });
+  }
+
+  const saving = pending || uploadPending;
 
   const stopScanner = () => {
     if (scanTimerRef.current !== null) {
@@ -227,33 +290,26 @@ export function ProductForm({
   }, [scannerOpen]);
 
   return (
-    <form action={formAction} className="vendor-form-page-form" encType="multipart/form-data">
+    <form className="vendor-form-page-form" onSubmit={handleSubmit}>
       <VendorFormShell
         footer={
           <>
-            {state.error ? (
+            {state.error || photoError ? (
               <p className="vendor-message vendor-message-error" role="alert">
-                {state.error}
+                {state.error ?? photoError}
               </p>
             ) : null}
             <VendorBottomBar
-              disabled={pending || name.trim().length < 2}
+              disabled={saving || name.trim().length < 2}
               icon="check"
               label={submitLabel}
-              pending={pending}
+              pending={saving}
               type="submit"
             />
           </>
         }
       >
-        <input
-          accept="image/*"
-          hidden
-          name="productImage"
-          onChange={onPhotoChange}
-          ref={fileRef}
-          type="file"
-        />
+        <input accept="image/*" hidden onChange={onPhotoChange} ref={fileRef} type="file" />
         <input name="clearImage" type="hidden" value={photoCleared ? "on" : "off"} />
 
         <div className="vendor-photo-row">

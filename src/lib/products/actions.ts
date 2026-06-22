@@ -48,6 +48,13 @@ function parseOptionalDecimal(value: FormDataEntryValue | null) {
   return parsed >= 0 ? parsed : null;
 }
 
+export async function uploadProductImageAction(
+  file: File
+): Promise<{ url?: string; error?: string }> {
+  const { store, user } = await requireStoreAccess();
+  return uploadProductImage(file, store.slug, user.id);
+}
+
 async function uploadProductImage(file: File, storeSlug: string, userId: string) {
   const supabase = await getSupabaseServerClient();
 
@@ -145,16 +152,12 @@ function parseProductForm(formData: FormData) {
   };
 }
 
-async function resolveProductImageUrl(
-  formData: FormData,
-  storeSlug: string,
-  userId: string
-): Promise<{ url?: string | null; error?: string }> {
+function resolveProductImageUrl(formData: FormData): { url?: string | null } {
   const clearImage = formData.get("clearImage") === "on";
-  const imageFile = formData.get("productImage");
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim();
 
-  if (imageFile instanceof File && imageFile.size > 0) {
-    return uploadProductImage(imageFile, storeSlug, userId);
+  if (imageUrl) {
+    return { url: imageUrl };
   }
 
   if (clearImage) {
@@ -175,10 +178,7 @@ export async function createProductAction(
     return { error: parsed.error };
   }
 
-  const image = await resolveProductImageUrl(formData, store.slug, user.id);
-  if (image.error) {
-    return { error: image.error };
-  }
+  const image = resolveProductImageUrl(formData);
 
   const supabase = await getSupabaseServerClient();
   const total = await countStoreProducts(store.id);
@@ -210,17 +210,14 @@ export async function updateProductAction(
   _prevState: ProductActionState,
   formData: FormData
 ): Promise<ProductActionState> {
-  const { store, user } = await requireStoreAccess();
+  const { store } = await requireStoreAccess();
   const parsed = parseProductForm(formData);
 
   if ("error" in parsed) {
     return { error: parsed.error };
   }
 
-  const image = await resolveProductImageUrl(formData, store.slug, user.id);
-  if (image.error) {
-    return { error: image.error };
-  }
+  const image = resolveProductImageUrl(formData);
 
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase
