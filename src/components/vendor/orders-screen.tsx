@@ -102,6 +102,7 @@ export function OrdersScreen({
     if (isSearching) return matchesSearch(order.order_code);
     return [
       "new", "quote", "quoted", "quote_answered",
+      "awaiting_installment_approval",
       "awaiting_payment", "awaiting_card", "cash_on_delivery",
       "payment_review"
     ].includes(order.status);

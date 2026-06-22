@@ -4,12 +4,15 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ClientOverlay } from "@/components/client/client-overlay";
 import { ClientScreenHeader } from "@/components/client/client-screen-header";
 import { ClientOrderRecibo } from "@/components/client/client-order-recibo";
+import { ClientPaymentProofRecord } from "@/components/client/client-payment-proof-record";
 import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
 import { formatBRL } from "@/lib/products/format";
+import { formatShortDate } from "@/lib/sales/format";
 import {
   getPortalOrderDetailForViewAction,
+  informOrderInstallmentPaymentAction,
   informOrderPaymentAction,
   finalizeClientOrderWithPaymentAction,
   cancelClientOrderAction,
@@ -20,7 +23,8 @@ import {
   isOrderCancellable,
   isOrderEditable,
   isOrderReceiptAvailable,
-  isQuoteAnswered
+  isQuoteAnswered,
+  getNextUnpaidInstallment
 } from "@/lib/client/order-status";
 import type { PortalOrder, PublicProduct, PublicStore } from "@/lib/client/queries";
 
@@ -98,6 +102,30 @@ export function ClientCatalogOrderDetail({
   const paymentMethod = (order?.customer_payment_method ?? initialOrder.customer_payment_method) as PaymentMethod | null;
   const total = order?.total_amount ?? initialOrder.total_amount ?? 0;
   const paymentInformed = order?.payment_informed ?? initialOrder.payment_informed ?? false;
+  const isInstallment = order?.payment_mode === "installment";
+  const nextInstallment = getNextUnpaidInstallment(order?.installments ?? []);
+  const installmentProofs = (order?.installments ?? []).filter((installment) => installment.payment_proof_url);
+
+  const handleInformInstallmentPayment = () => {
+    if (!nextInstallment?.id) return;
+    setError(null);
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.append("storeId", storeId);
+      fd.append("storeSlug", storeSlug);
+      fd.append("orderId", initialOrder.id);
+      fd.append("installmentId", nextInstallment.id!);
+      if (receiptFile) fd.append("receipt", receiptFile);
+      const res = await informOrderInstallmentPaymentAction(fd);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      const refreshed = await getPortalOrderDetailForViewAction(storeId, initialOrder.id);
+      if (refreshed.order) setDetail(refreshed.order);
+      onRefresh();
+    });
+  };
 
   const getItemProduct = (productId: string | null) => {
     if (!productId) return null;
@@ -439,9 +467,75 @@ export function ClientCatalogOrderDetail({
               </>
             )}
 
-            {/* novo + pix → pagar e informar */}
+            {/* Aguardando autorização do parcelamento */}
+            {status === "awaiting_installment_approval" && (
+              <div
+                className="client-catalog-state-card"
+                style={{ background: "#fef3c7", borderColor: "#fde68a", marginTop: 12 }}
+              >
+                <VendorIcon name="clock" size={19} style={{ color: "#b45309", flexShrink: 0, marginTop: 1 }} />
+                <div className="client-catalog-state-text">
+                  Parcelamento enviado para a loja. Aguarde a autorização para liberar o pagamento
+                  {paymentMethod === "pix"
+                    ? " via PIX"
+                    : paymentMethod === "cash"
+                      ? " em dinheiro"
+                      : " no cartão"}
+                  .
+                </div>
+              </div>
+            )}
+
+            {isInstallment && order?.installments?.length ? (
+              <>
+                <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
+                  PARCELAS
+                </p>
+                <div className="client-order-installment-list">
+                  {order.installments.map((installment) => (
+                    <div
+                      className={`client-order-installment-item${installment.paid ? " is-paid" : ""}`}
+                      key={installment.id}
+                    >
+                      <span>{installment.installment_number}</span>
+                      <div>
+                        <strong>{formatBRL(installment.amount)}</strong>
+                        <small>Vence {formatShortDate(installment.due_date)}</small>
+                      </div>
+                      <em>{installment.paid ? "Paga" : installment.payment_informed ? "Informada" : "Em aberto"}</em>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {(order?.payment_proof_url || installmentProofs.length > 0) && (
+              <>
+                <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
+                  SEUS COMPROVANTES
+                </p>
+                {order?.payment_proof_url ? (
+                  <ClientPaymentProofRecord
+                    name={order.payment_proof_name}
+                    url={order.payment_proof_url}
+                  />
+                ) : null}
+                {installmentProofs.map((installment) => (
+                  <ClientPaymentProofRecord
+                    key={installment.id}
+                    label={`Comprovante da parcela ${installment.installment_number}`}
+                    name={installment.payment_proof_name}
+                    subtitle={`Parcela ${installment.installment_number}`}
+                    url={installment.payment_proof_url!}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* novo + pix à vista → pagar e informar */}
             {(status === "awaiting_payment" || status === "new" || status === "payment_review") &&
-              paymentMethod === "pix" && (
+              paymentMethod === "pix" &&
+              !isInstallment && (
                 <>
                   <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
                     PAGUE COM PIX
@@ -479,8 +573,54 @@ export function ClientCatalogOrderDetail({
                 </>
               )}
 
+            {isInstallment &&
+              order?.installment_plan_status === "approved" &&
+              paymentMethod === "pix" &&
+              nextInstallment &&
+              status !== "paid" && (
+                <>
+                  <p className="vendor-section-label" style={{ marginTop: 16, marginBottom: 10 }}>
+                    PAGUE A PARCELA {nextInstallment.installment_number}
+                  </p>
+                  <ClientPixPaymentBlock
+                    amount={nextInstallment.amount}
+                    receiptControl={pixReceiptControl}
+                    store={store}
+                  />
+                  {error ? <p className="client-auth-error" style={{ marginTop: 8 }}>{error}</p> : null}
+                  {!nextInstallment.payment_informed ? (
+                    <button
+                      className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
+                      disabled={pending}
+                      onClick={handleInformInstallmentPayment}
+                      style={{ marginTop: 12 }}
+                      type="button"
+                    >
+                      <VendorIcon name="check-circle" size={18} />
+                      {pending ? "Aguarde…" : "Já paguei esta parcela"}
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        justifyContent: "center",
+                        color: "var(--green-700)",
+                        fontWeight: 700,
+                        fontSize: 13.5
+                      }}
+                    >
+                      <VendorIcon name="check-circle" size={16} />
+                      Parcela informada · aguardando a loja confirmar
+                    </div>
+                  )}
+                </>
+              )}
+
             {/* novo + cartão sem link ainda */}
-            {status === "awaiting_payment" && paymentMethod === "card" && (
+            {status === "awaiting_payment" && paymentMethod === "card" && !isInstallment && (
               <div
                 className="client-catalog-state-card"
                 style={{ background: "#f5f3ff", borderColor: "#ddd6fe", marginTop: 12 }}

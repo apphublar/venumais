@@ -1024,6 +1024,287 @@
   cursor: pointer;
 }
 
+.client-cart-installment-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 15px;
+  border: 1px solid var(--client-line);
+  border-radius: 14px;
+  background: var(--client-card);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-cart-installment-toggle.is-active {
+  border-color: var(--client-green-600);
+  background: var(--client-green-50);
+}
+
+.client-cart-installment-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.client-cart-installment-toggle strong {
+  font-size: 0.9rem;
+  color: var(--client-ink-1);
+}
+
+.client-cart-installment-toggle small {
+  font-size: 0.74rem;
+  color: var(--client-ink-3);
+  font-weight: 600;
+}
+
+.client-cart-installment-plan {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--client-line);
+  border-radius: 14px;
+  background: var(--client-bg-2);
+}
+
+.client-cart-installment-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.client-cart-installment-plan-header strong {
+  font-size: 0.86rem;
+  color: var(--client-ink-1);
+}
+
+.client-cart-installment-plan-header span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--client-green-700);
+}
+
+.client-cart-installment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-cart-installment-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--client-card);
+}
+
+.client-cart-installment-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--client-green-600);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.client-cart-installment-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.client-cart-installment-date span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--client-ink-3);
+}
+
+.client-cart-installment-date input {
+  border: 1px solid var(--client-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.client-cart-installment-remove {
+  border: none;
+  background: none;
+  color: var(--client-ink-3);
+  cursor: pointer;
+}
+
+.client-cart-installment-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  color: var(--client-green-700);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.client-cart-installment-hint,
+.client-cart-installment-warning {
+  margin: 10px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.client-cart-installment-hint {
+  color: var(--client-ink-3);
+}
+
+.client-cart-installment-warning {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.client-cart-card-mode {
+  margin-top: 14px;
+}
+
+.client-cart-card-mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.client-cart-card-mode-btn {
+  padding: 12px 10px;
+  border: 1px solid var(--client-line);
+  border-radius: 12px;
+  background: var(--client-card);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--client-ink-2);
+  cursor: pointer;
+}
+
+.client-cart-card-mode-btn.is-active {
+  border-color: #6d28d9;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.client-payment-proof-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--client-line);
+  border-radius: 14px;
+  background: var(--client-card);
+}
+
+.client-payment-proof-record-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--client-bg-2);
+  color: var(--client-ink-3);
+  flex-shrink: 0;
+}
+
+.client-payment-proof-record-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.client-payment-proof-record-copy strong {
+  font-size: 0.86rem;
+  color: var(--client-ink-1);
+}
+
+.client-payment-proof-record-copy span,
+.client-payment-proof-record-copy small {
+  font-size: 0.74rem;
+  color: var(--client-ink-3);
+  font-weight: 600;
+}
+
+.client-payment-proof-record-link {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--client-green-50);
+  color: var(--client-green-700);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.client-order-installment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.client-order-installment-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--client-line);
+  border-radius: 12px;
+  background: var(--client-card);
+}
+
+.client-order-installment-item.is-paid {
+  background: var(--client-green-50);
+  border-color: var(--client-green-600);
+}
+
+.client-order-installment-item > span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--client-green-600);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.client-order-installment-item strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.client-order-installment-item small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--client-ink-3);
+}
+
+.client-order-installment-item em {
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--client-ink-2);
+}
+
 /* Dinheiro / Cartão detalhe */
 .client-cart-pgto-detail {
   display: flex;

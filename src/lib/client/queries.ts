@@ -211,7 +211,18 @@ export type VendorStoreOrder = PortalOrder & {
   customer_avatar_color: string;
   payment_proof_url?: string | null;
   payment_informed?: boolean;
+  payment_mode?: "cash" | "installment" | null;
+  installment_plan_status?: "none" | "pending" | "approved" | "rejected" | null;
   expected_delivery_date?: string | null;
+  installments?: Array<{
+    id: string;
+    installment_number: number;
+    due_date: string;
+    amount: number;
+    paid: boolean;
+    paid_at?: string | null;
+    payment_informed?: boolean;
+  }>;
 };
 
 export type CancelledStoreOrder = {
@@ -419,7 +430,14 @@ export async function listVendorStoreOrders(storeId: string) {
     subtotal_amount: row.subtotal_amount === null ? null : Number(row.subtotal_amount),
     discount_amount: Number(row.discount_amount),
     total_amount: row.total_amount === null ? null : Number(row.total_amount),
-    item_count: Number(row.item_count)
+    item_count: Number(row.item_count),
+    installments: Array.isArray(row.installments)
+      ? row.installments.map((installment) => ({
+          ...installment,
+          amount: Number(installment.amount),
+          paid: Boolean(installment.paid)
+        }))
+      : []
   }));
 }
 

@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorCard } from "@/components/vendor/card";
+import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
+import { getVendorOrderPaymentBadge } from "@/lib/client/order-status";
 import { getCustomerInitials } from "@/lib/customers/format";
+import { formatBRL } from "@/lib/products/format";
 import { formatShortDate } from "@/lib/sales/format";
 import type { VendorStoreOrder } from "@/lib/client/queries";
+import type { SaleInstallment } from "@/lib/sales/types";
 
 function orderStatusLabel(order: VendorStoreOrder) {
   if (order.order_type === "wholesale") {
@@ -16,11 +20,21 @@ function orderStatusLabel(order: VendorStoreOrder) {
   if (order.status === "quote" || order.order_type === "quote") {
     return { label: "Orçamento", tone: "quote" as const };
   }
+  if (order.status === "awaiting_installment_approval") {
+    return { label: "Parcelado", tone: "new" as const };
+  }
   return { label: "Novo pedido", tone: "new" as const };
 }
 
 export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
   const status = orderStatusLabel(order);
+  const installment = order.payment_mode === "installment";
+  const installmentCount = order.installments?.length ?? 0;
+  const paymentBadge = getVendorOrderPaymentBadge(order);
+  const showQuoteBadge =
+    order.status === "quote" ||
+    order.order_type === "quote" ||
+    order.order_type === "wholesale";
 
   return (
     <Link href={`/painel/pedidos/${order.id}`}>
@@ -37,11 +51,30 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
             <span>
               #{String(order.order_code).padStart(4, "0")} · {order.item_count}{" "}
               {order.item_count === 1 ? "item" : "itens"} · {formatShortDate(order.created_at)}
+              {installment && installmentCount > 0 ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <em className="vendor-sale-row-installment">{installmentCount}x</em>
+                </>
+              ) : null}
             </span>
           </div>
-          <span className={`vendor-order-status vendor-order-status-${status.tone}`}>
-            {status.label}
-          </span>
+          {showQuoteBadge ? (
+            <span className={`vendor-order-status vendor-order-status-${status.tone}`}>
+              {status.label}
+            </span>
+          ) : (
+            <div className="vendor-order-row-side">
+              <strong>
+                {order.total_amount !== null ? formatBRL(order.total_amount) : "A combinar"}
+              </strong>
+              <span className={`vendor-sale-badge ${paymentBadge.className} vendor-sale-badge-small`.trim()}>
+                <span aria-hidden="true" className="vendor-sale-badge-dot" />
+                {paymentBadge.label}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="vendor-order-row-meta">
@@ -56,6 +89,10 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
             </span>
           ) : null}
         </div>
+
+        {installment && order.installments?.length && order.installment_plan_status === "approved" ? (
+          <VendorCrediarioProgress installments={order.installments as SaleInstallment[]} />
+        ) : null}
       </VendorCard>
     </Link>
   );

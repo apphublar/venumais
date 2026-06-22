@@ -3384,6 +3384,26 @@ button.vendor-card {
   display: inline-flex;
 }
 
+.vendor-order-installment-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.vendor-order-installment-review-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vendor-order-installment-review-row > div span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--vendor-ink-3);
+}
+
 .vendor-order-status {
   padding: 4px 10px;
   border-radius: 999px;

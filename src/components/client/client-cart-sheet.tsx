@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ClientCartInstallmentPlan } from "@/components/client/client-cart-installment-plan";
 import { ClientPixPaymentBlock } from "@/components/client/client-pix-payment-block";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
@@ -13,6 +14,8 @@ import type { PublicProduct, PublicStore } from "@/lib/client/queries";
 
 type DeliveryType = "pickup" | "delivery";
 type PaymentMethod = "pix" | "cash" | "card";
+type PaymentMode = "cash" | "installment";
+type InstallmentCardMode = "full" | "per_installment";
 
 type ValidatedCoupon = {
   code: string;
@@ -55,6 +58,11 @@ export function ClientCartSheet({
   const [validatedCoupon, setValidatedCoupon] = useState<ValidatedCoupon | null>(null);
   const [couponPending, setCouponPending] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("cash");
+  const [installmentCardMode, setInstallmentCardMode] = useState<InstallmentCardMode>("per_installment");
+  const [installments, setInstallments] = useState<
+    Array<{ installment_number: number; due_date: string; amount: number }>
+  >([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -137,6 +145,13 @@ export function ClientCartSheet({
     setStep("payment");
   };
 
+  const handleInstallmentChange = useCallback(
+    (rows: Array<{ installment_number: number; due_date: string; amount: number }>) => {
+      setInstallments(rows);
+    },
+    []
+  );
+
   const submitOrder = (method: PaymentMethod | null) => {
     setError(null);
     startTransition(async () => {
@@ -159,7 +174,14 @@ export function ClientCartSheet({
 
       if (method) {
         fd.append("paymentMethod", method);
-        if (method === "pix" && receiptFile) {
+        fd.append("paymentMode", paymentMode);
+        if (paymentMode === "installment") {
+          fd.append("installments", JSON.stringify(installments));
+          if (method === "card") {
+            fd.append("installmentCardMode", installmentCardMode);
+          }
+        }
+        if (paymentMode === "cash" && method === "pix" && receiptFile) {
           fd.append("receipt", receiptFile);
         }
       }
@@ -172,7 +194,13 @@ export function ClientCartSheet({
       }
 
       setCart({});
-      onSubmitted(result.isQuote ? "Orçamento enviado ✓" : "Pedido enviado para a loja ✓");
+      onSubmitted(
+        result.isQuote
+          ? "Orçamento enviado ✓"
+          : paymentMode === "installment"
+            ? "Pedido enviado · aguardando autorização da loja ✓"
+            : "Pedido enviado para a loja ✓"
+      );
       onClose();
     });
   };
@@ -364,7 +392,46 @@ export function ClientCartSheet({
                 ))}
               </div>
 
-              {paymentMethod === "pix" && (
+              <button
+                className={`client-cart-installment-toggle${paymentMode === "installment" ? " is-active" : ""}`}
+                onClick={() => setPaymentMode((current) => (current === "installment" ? "cash" : "installment"))}
+                type="button"
+              >
+                <VendorIcon name="cards" size={18} />
+                <span>
+                  <strong>Pagamento parcelado</strong>
+                  <small>Informe as datas · aguarda autorização da loja</small>
+                </span>
+              </button>
+
+              {paymentMode === "installment" ? (
+                <>
+                  <ClientCartInstallmentPlan onChange={handleInstallmentChange} total={total} />
+                  {paymentMethod === "card" ? (
+                    <div className="client-cart-card-mode">
+                      <p className="client-cart-section-label client-cart-section-label-normal">
+                        Como pagar no cartão
+                      </p>
+                      <div className="client-cart-card-mode-options">
+                        <button
+                          className={`client-cart-card-mode-btn${installmentCardMode === "full" ? " is-active" : ""}`}
+                          onClick={() => setInstallmentCardMode("full")}
+                          type="button"
+                        >
+                          Pagar tudo parcelado
+                        </button>
+                        <button
+                          className={`client-cart-card-mode-btn${installmentCardMode === "per_installment" ? " is-active" : ""}`}
+                          onClick={() => setInstallmentCardMode("per_installment")}
+                          type="button"
+                        >
+                          Parcela a parcela
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              ) : paymentMethod === "pix" ? (
                 <ClientPixPaymentBlock
                   amount={total}
                   receiptControl={
@@ -384,9 +451,7 @@ export function ClientCartSheet({
                   }
                   store={store}
                 />
-              )}
-
-              {paymentMethod === "cash" && (
+              ) : paymentMethod === "cash" ? (
                 <div className="client-cart-pgto-detail">
                   <div className="client-cart-pgto-icon" style={{ background: "#fff7ed" }}>
                     <VendorIcon name="wallet" size={32} style={{ color: "#ea580c" }} />
@@ -397,9 +462,7 @@ export function ClientCartSheet({
                     {deliveryType === "delivery" ? "na entrega" : "na retirada"}.
                   </span>
                 </div>
-              )}
-
-              {paymentMethod === "card" && (
+              ) : paymentMethod === "card" ? (
                 <div className="client-cart-pgto-detail">
                   <div className="client-cart-pgto-icon" style={{ background: "#ede9fe" }}>
                     <VendorIcon name="cards" size={32} style={{ color: "#6d28d9" }} />
@@ -410,7 +473,20 @@ export function ClientCartSheet({
                     app.
                   </span>
                 </div>
-              )}
+              ) : null}
+
+              {paymentMode === "installment" && paymentMethod !== "card" ? (
+                <div className="client-cart-pgto-detail">
+                  <div className="client-cart-pgto-icon" style={{ background: "#fef3c7" }}>
+                    <VendorIcon name="clock" size={32} style={{ color: "#b45309" }} />
+                  </div>
+                  <strong>Aguardando autorização</strong>
+                  <span>
+                    A loja vai analisar as datas das parcelas. Depois de aprovar, você recebe as instruções de
+                    pagamento aqui no app.
+                  </span>
+                </div>
+              ) : null}
 
               {error ? <p className="client-auth-error">{error}</p> : null}
             </>
@@ -440,7 +516,14 @@ export function ClientCartSheet({
               </div>
               <button
                 className="vendor-button vendor-button-primary vendor-button-lg vendor-button-full"
-                disabled={pending}
+                disabled={
+                  pending ||
+                  (paymentMode === "installment" &&
+                    (installments.length < 2 ||
+                      Math.abs(
+                        installments.reduce((sum, row) => sum + row.amount, 0) - total
+                      ) > 0.02))
+                }
                 onClick={() => submitOrder(paymentMethod)}
                 type="button"
               >

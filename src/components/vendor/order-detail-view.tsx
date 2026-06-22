@@ -3,18 +3,24 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import {
   approveStoreOrderAction,
+  approveStoreOrderInstallmentPlanAction,
+  confirmStoreOrderInstallmentPaymentAction,
   confirmStoreOrderPaymentAction,
+  rejectStoreOrderInstallmentPlanAction,
+  setStoreOrderInstallmentPaymentLinkAction,
   setStoreOrderPaymentLinkAction
 } from "@/lib/client/order-actions";
 import { formatCustomerAddress, type StoreOrderDetail } from "@/lib/client/order-types";
 import { getOrderStatusMeta, PAYMENT_META } from "@/lib/client/order-status";
-import { brStr } from "@/lib/sales/format";
+import { brStr, formatShortDate } from "@/lib/sales/format";
+import type { SaleInstallment } from "@/lib/sales/types";
 import { formatBRL, parseBRL } from "@/lib/products/format";
 
 export function OrderDetailView({
@@ -53,12 +59,22 @@ export function OrderDetailView({
   ].includes(order.status);
   const isPaid = order.status === "paid" || order.status === "delivering" || order.status === "delivered";
   const isAwaitingCard = order.status === "awaiting_card";
+  const paymentMethod = order.customer_payment_method;
+  const paymentInformed = order.payment_informed ?? false;
+  const isInstallment = order.payment_mode === "installment";
+  const awaitingInstallmentApproval = order.status === "awaiting_installment_approval";
+  const nextUnpaidInstallment = order.installments.find((installment) => !installment.paid);
   const needsCardLink =
+    !isInstallment &&
     order.status === "awaiting_payment" &&
     order.customer_payment_method === "card" &&
     !order.vendor_payment_link;
-  const paymentMethod = order.customer_payment_method;
-  const paymentInformed = order.payment_informed ?? false;
+  const needsInstallmentFullCardLink =
+    isInstallment &&
+    order.installment_card_mode === "full" &&
+    order.status === "awaiting_payment" &&
+    order.customer_payment_method === "card" &&
+    !order.vendor_payment_link;
 
   const total = useMemo(
     () =>
@@ -151,6 +167,59 @@ export function OrderDetailView({
         orderId: order.id,
         paymentLink,
         paymentMessage
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  const approveInstallmentPlan = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await approveStoreOrderInstallmentPlanAction(storeId, order.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  const rejectInstallmentPlan = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await rejectStoreOrderInstallmentPlanAction(storeId, order.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.push("/painel/pedidos");
+    });
+  };
+
+  const confirmInstallmentPayment = (installmentId: string) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await confirmStoreOrderInstallmentPaymentAction(storeId, order.id, installmentId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  };
+
+  const saveInstallmentPaymentLink = (installmentId: string, link: string, message: string) => {
+    startTransition(async () => {
+      const result = await setStoreOrderInstallmentPaymentLinkAction({
+        storeId,
+        orderId: order.id,
+        installmentId,
+        paymentLink: link,
+        paymentMessage: message
       });
       if (result.error) {
         setError(result.error);
@@ -312,6 +381,103 @@ export function OrderDetailView({
                 40%
               </button>
             </div>
+          </>
+        ) : null}
+
+        {awaitingInstallmentApproval && order.installments.length ? (
+          <>
+            <div className="vendor-section-label">Plano parcelado solicitado</div>
+            <VendorCard className="vendor-order-detail-subcard">
+              <div className="vendor-order-detail-notice-copy">
+                <strong>Cliente pediu pagamento parcelado</strong>
+                <span>
+                  Revise as datas abaixo e autorize para liberar o pagamento
+                  {paymentMethod === "pix"
+                    ? " via PIX"
+                    : paymentMethod === "cash"
+                      ? " em dinheiro"
+                      : " no cartão"}
+                  .
+                </span>
+              </div>
+            </VendorCard>
+            <div className="vendor-order-installment-review">
+              {order.installments.map((installment) => (
+                <VendorCard className="vendor-order-installment-review-row" key={installment.id}>
+                  <span className="vendor-installment-badge">{installment.installment_number}</span>
+                  <div>
+                    <strong>{formatBRL(installment.amount)}</strong>
+                    <span>Vence {formatShortDate(installment.due_date)}</span>
+                  </div>
+                </VendorCard>
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        {isInstallment && order.installment_plan_status === "approved" && order.installments.length ? (
+          <>
+            <div className="vendor-section-label">Parcelas do pedido</div>
+            <VendorCrediarioProgress installments={order.installments as SaleInstallment[]} />
+            {order.installments.map((installment) => (
+              <VendorCard className="vendor-order-installment-review-row" key={installment.id}>
+                <span className="vendor-installment-badge">{installment.installment_number}</span>
+                <div className="vendor-order-detail-notice-copy">
+                  <strong>{formatBRL(installment.amount)}</strong>
+                  <span>
+                    Vence {formatShortDate(installment.due_date)}
+                    {installment.paid ? " · Paga" : installment.payment_informed ? " · Cliente informou pagamento" : ""}
+                  </span>
+                </div>
+                {installment.payment_proof_url ? (
+                  <a
+                    className="vendor-button vendor-button-ghost"
+                    href={installment.payment_proof_url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Ver comprovante
+                  </a>
+                ) : null}
+                {!installment.paid && installment.payment_informed ? (
+                  <button
+                    className="vendor-button vendor-button-primary"
+                    disabled={pending}
+                    onClick={() => confirmInstallmentPayment(installment.id!)}
+                    type="button"
+                  >
+                    Confirmar parcela
+                  </button>
+                ) : null}
+                {!installment.paid &&
+                paymentMethod === "card" &&
+                order.installment_card_mode === "per_installment" ? (
+                  <div className="vendor-order-delivery-grid" style={{ width: "100%", marginTop: 8 }}>
+                    <label className="vendor-field">
+                      <span>Link da parcela {installment.installment_number}</span>
+                      <input
+                        defaultValue={installment.vendor_payment_link ?? ""}
+                        id={`installment-link-${installment.id}`}
+                        placeholder="https://..."
+                      />
+                    </label>
+                    <button
+                      className="vendor-button vendor-button-ghost"
+                      disabled={pending}
+                      onClick={() => {
+                        const input = document.getElementById(
+                          `installment-link-${installment.id}`
+                        ) as HTMLInputElement | null;
+                        saveInstallmentPaymentLink(installment.id!, input?.value ?? "", "");
+                      }}
+                      type="button"
+                    >
+                      Salvar link
+                    </button>
+                  </div>
+                ) : null}
+              </VendorCard>
+            ))}
           </>
         ) : null}
 
@@ -529,13 +695,34 @@ export function OrderDetailView({
             <VendorIcon name="check" size={18} />
             {pending ? "Enviando…" : "Aprovar e enviar ao cliente"}
           </button>
+        ) : awaitingInstallmentApproval ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            <button
+              className="vendor-button vendor-button-primary vendor-button-full"
+              disabled={pending}
+              onClick={approveInstallmentPlan}
+              type="button"
+            >
+              <VendorIcon name="check" size={18} />
+              {pending ? "Autorizando…" : "Autorizar parcelamento"}
+            </button>
+            <button
+              className="vendor-button vendor-button-danger vendor-button-full"
+              disabled={pending}
+              onClick={rejectInstallmentPlan}
+              type="button"
+            >
+              <VendorIcon name="x" size={18} />
+              Recusar parcelamento
+            </button>
+          </div>
         ) : isPaid ? (
           /* Pago: ações de entrega */
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <VendorIcon name="check-circle" size={19} style={{ color: "var(--green-700)" }} />
             <span style={{ fontWeight: 800, fontSize: 15, color: "var(--green-700)" }}>Pedido pago</span>
           </div>
-        ) : needsCardLink ? (
+        ) : needsCardLink || needsInstallmentFullCardLink ? (
           /* Cartão: gerar link (sem link ainda) */
           <button
             className="vendor-button vendor-button-primary vendor-button-full"
@@ -546,8 +733,8 @@ export function OrderDetailView({
             <VendorIcon name="cards" size={18} />
             {pending ? "Salvando…" : "Gerar link de pagamento"}
           </button>
-        ) : awaitingPayment ? (
-          /* Qualquer estado aguardando: Marcar como pago */
+        ) : awaitingPayment && !isInstallment ? (
+          /* À vista: Marcar como pago */
           <button
             className="vendor-button vendor-button-primary vendor-button-full"
             disabled={pending}
@@ -556,6 +743,22 @@ export function OrderDetailView({
           >
             <VendorIcon name="check" size={18} />
             {pending ? "Confirmando…" : "Marcar como pago"}
+          </button>
+        ) : isInstallment &&
+          order.installment_plan_status === "approved" &&
+          nextUnpaidInstallment?.payment_informed ? (
+          <button
+            className="vendor-button vendor-button-primary vendor-button-full"
+            disabled={pending}
+            onClick={() => confirmInstallmentPayment(nextUnpaidInstallment.id!)}
+            type="button"
+          >
+            <VendorIcon name="check" size={18} />
+            {pending ? "Confirmando…" : `Confirmar parcela ${nextUnpaidInstallment.installment_number}`}
+          </button>
+        ) : awaitingPayment ? (
+          <button className="vendor-button vendor-button-ghost vendor-button-full" disabled type="button">
+            Aguardando pagamento do cliente
           </button>
         ) : order.status === "new" || order.status === "quote" ? (
           /* Aguardando cliente */

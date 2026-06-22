@@ -455,6 +455,12 @@ export async function checkoutClientOrderAction(
   const notes = String(formData.get("notes") ?? "");
   const couponCode = String(formData.get("couponCode") ?? "");
   const paymentMethod = String(formData.get("paymentMethod") ?? "") as "pix" | "cash" | "card" | "";
+  const paymentMode = String(formData.get("paymentMode") ?? "cash") as "cash" | "installment";
+  const installmentCardMode = String(formData.get("installmentCardMode") ?? "") as
+    | "full"
+    | "per_installment"
+    | "";
+  const installmentsJson = String(formData.get("installments") ?? "");
   const isQuote = formData.get("isQuote") === "true";
   const receipt = formData.get("receipt");
   const itemsJson = String(formData.get("items") ?? "[]");
@@ -502,20 +508,49 @@ export async function checkoutClientOrderAction(
     return { error: "Escolha uma forma de pagamento." };
   }
 
+  let installmentsPayload: Array<{
+    installment_number: number;
+    due_date: string;
+    amount: number;
+  }> | null = null;
+
+  if (paymentMode === "installment") {
+    try {
+      installmentsPayload = JSON.parse(installmentsJson);
+    } catch {
+      return { error: "Parcelas inválidas." };
+    }
+
+    if (!Array.isArray(installmentsPayload) || installmentsPayload.length < 2) {
+      return { error: "Informe ao menos 2 parcelas com datas." };
+    }
+  }
+
   // 3. Finalizar com método de pagamento
   const { error: finalizeError } = await supabase.rpc("finalize_customer_order_for_portal", {
     p_store_id: storeId,
     p_order_id: oid,
     p_payment_method: paymentMethod,
-    p_payment_note: null
+    p_payment_note: null,
+    p_payment_mode: paymentMode,
+    p_installments: installmentsPayload,
+    p_installment_card_mode:
+      paymentMode === "installment" && paymentMethod === "card"
+        ? installmentCardMode || "per_installment"
+        : null
   });
 
   if (finalizeError) {
     return { error: clientAuthError(finalizeError.message) };
   }
 
-  // 4. PIX + comprovante opcional
-  if (paymentMethod === "pix" && receipt instanceof File && receipt.size > 0) {
+  // 4. PIX à vista + comprovante opcional (parcelado aguarda autorização)
+  if (
+    paymentMode === "cash" &&
+    paymentMethod === "pix" &&
+    receipt instanceof File &&
+    receipt.size > 0
+  ) {
     const uploadResult = await uploadPaymentProof(supabase, receipt, storeSlug, oid);
     if ("error" in uploadResult) {
       return { error: uploadResult.error };
@@ -614,6 +649,9 @@ export type OrderDetailView = {
   payment_proof_url: string | null;
   payment_proof_name: string | null;
   payment_informed: boolean;
+  payment_mode: "cash" | "installment" | null;
+  installment_plan_status: "none" | "pending" | "approved" | "rejected" | null;
+  installment_card_mode: "full" | "per_installment" | null;
   paid_at: string | null;
   notes: string | null;
   coupon_code: string | null;
@@ -631,6 +669,20 @@ export type OrderDetailView = {
     quantity: number;
     unit_price: number | null;
   }>;
+  installments: Array<{
+    id: string;
+    installment_number: number;
+    due_date: string;
+    amount: number;
+    paid: boolean;
+    paid_at: string | null;
+    payment_informed: boolean;
+    payment_proof_url: string | null;
+    payment_proof_name: string | null;
+    payment_reported_at: string | null;
+    vendor_payment_link: string | null;
+    vendor_payment_message: string | null;
+  }>;
 };
 
 /**
@@ -645,6 +697,12 @@ export async function finalizeClientOrderWithPaymentAction(
   const storeSlug = String(formData.get("storeSlug") ?? "");
   const orderId = String(formData.get("orderId") ?? "");
   const paymentMethod = String(formData.get("paymentMethod") ?? "") as "pix" | "cash" | "card";
+  const paymentMode = String(formData.get("paymentMode") ?? "cash") as "cash" | "installment";
+  const installmentCardMode = String(formData.get("installmentCardMode") ?? "") as
+    | "full"
+    | "per_installment"
+    | "";
+  const installmentsJson = String(formData.get("installments") ?? "");
   const paymentNote = String(formData.get("paymentNote") ?? "");
   const receipt = formData.get("receipt");
 
@@ -657,19 +715,48 @@ export async function finalizeClientOrderWithPaymentAction(
   }
 
   const supabase = await getSupabaseServerClient();
+
+  let installmentsPayload: Array<{
+    installment_number: number;
+    due_date: string;
+    amount: number;
+  }> | null = null;
+
+  if (paymentMode === "installment") {
+    try {
+      installmentsPayload = JSON.parse(installmentsJson);
+    } catch {
+      return { error: "Parcelas inválidas." };
+    }
+
+    if (!Array.isArray(installmentsPayload) || installmentsPayload.length < 2) {
+      return { error: "Informe ao menos 2 parcelas com datas." };
+    }
+  }
+
   const { error: finalizeError } = await supabase.rpc("finalize_customer_order_for_portal", {
     p_store_id: storeId,
     p_order_id: orderId,
     p_payment_method: paymentMethod,
-    p_payment_note: paymentNote.trim() || null
+    p_payment_note: paymentNote.trim() || null,
+    p_payment_mode: paymentMode,
+    p_installments: installmentsPayload,
+    p_installment_card_mode:
+      paymentMode === "installment" && paymentMethod === "card"
+        ? installmentCardMode || "per_installment"
+        : null
   });
 
   if (finalizeError) {
     return { error: clientAuthError(finalizeError.message) };
   }
 
-  // Comprovante PIX opcional: se anexado, seta payment_informed=true
-  if (paymentMethod === "pix" && receipt instanceof File && receipt.size > 0) {
+  if (
+    paymentMode === "cash" &&
+    paymentMethod === "pix" &&
+    receipt instanceof File &&
+    receipt.size > 0
+  ) {
     const uploadResult = await uploadPaymentProof(supabase, receipt, storeSlug, orderId);
     if ("error" in uploadResult) {
       return { error: uploadResult.error };
@@ -680,6 +767,54 @@ export async function finalizeClientOrderWithPaymentAction(
       p_proof_url: uploadResult.url,
       p_proof_name: uploadResult.name
     });
+  }
+
+  revalidatePath(`/loja/${storeSlug}`);
+  revalidatePath("/painel/pedidos");
+  return {};
+}
+
+export async function informOrderInstallmentPaymentAction(
+  formData: FormData
+): Promise<{ error?: string }> {
+  const storeId = String(formData.get("storeId") ?? "");
+  const storeSlug = String(formData.get("storeSlug") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  const installmentId = String(formData.get("installmentId") ?? "");
+  const receipt = formData.get("receipt");
+
+  if (!storeId || !storeSlug || !orderId || !installmentId) {
+    return { error: "Dados inválidos." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  let proofUrl: string | null = null;
+  let proofName: string | null = null;
+
+  if (receipt instanceof File && receipt.size > 0) {
+    const uploadResult = await uploadPaymentProof(
+      supabase,
+      receipt,
+      storeSlug,
+      `${orderId}-${installmentId}`
+    );
+    if ("error" in uploadResult) {
+      return { error: uploadResult.error };
+    }
+    proofUrl = uploadResult.url;
+    proofName = uploadResult.name;
+  }
+
+  const { error } = await supabase.rpc("inform_order_installment_payment_for_portal", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_installment_id: installmentId,
+    p_proof_url: proofUrl,
+    p_proof_name: proofName
+  });
+
+  if (error) {
+    return { error: clientAuthError(error.message) };
   }
 
   revalidatePath(`/loja/${storeSlug}`);

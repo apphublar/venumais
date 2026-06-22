@@ -128,3 +128,81 @@ export async function generateCardPaymentLinkAction(input: {
     paymentMessage: input.paymentMessage
   });
 }
+
+export async function approveStoreOrderInstallmentPlanAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("approve_store_order_installment_plan", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/painel/pedidos");
+  revalidatePath(`/painel/pedidos/${orderId}`);
+  return { success: true as const };
+}
+
+export async function rejectStoreOrderInstallmentPlanAction(storeId: string, orderId: string) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("reject_store_order_installment_plan", {
+    p_store_id: storeId,
+    p_order_id: orderId
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/painel/pedidos");
+  revalidatePath(`/painel/pedidos/${orderId}`);
+  return { success: true as const };
+}
+
+export async function confirmStoreOrderInstallmentPaymentAction(
+  storeId: string,
+  orderId: string,
+  installmentId: string
+) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("confirm_store_order_installment_payment", {
+    p_store_id: storeId,
+    p_order_id: orderId,
+    p_installment_id: installmentId
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/painel/pedidos");
+  revalidatePath(`/painel/pedidos/${orderId}`);
+  return { success: true as const };
+}
+
+export async function setStoreOrderInstallmentPaymentLinkAction(input: {
+  storeId: string;
+  orderId: string;
+  installmentId: string;
+  paymentLink?: string;
+  paymentMessage?: string;
+}) {
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("set_store_order_installment_payment_link", {
+    p_store_id: input.storeId,
+    p_order_id: input.orderId,
+    p_installment_id: input.installmentId,
+    p_payment_link: input.paymentLink || null,
+    p_payment_message: input.paymentMessage || null
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/painel/pedidos");
+  revalidatePath(`/painel/pedidos/${input.orderId}`);
+  return { success: true as const };
+}

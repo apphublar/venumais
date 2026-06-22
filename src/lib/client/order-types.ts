@@ -1,3 +1,5 @@
+import type { StoreOrderInstallment } from "@/lib/client/order-status";
+
 export type StoreOrderItem = {
   id: string;
   product_id: string | null;
@@ -23,6 +25,9 @@ export type StoreOrderDetail = {
   payment_proof_url?: string | null;
   payment_proof_name?: string | null;
   payment_informed?: boolean | null;
+  payment_mode?: "cash" | "installment" | null;
+  installment_plan_status?: "none" | "pending" | "approved" | "rejected" | null;
+  installment_card_mode?: "full" | "per_installment" | null;
   quote_sent_at?: string | null;
   customer_confirmed_at?: string | null;
   payment_reported_at?: string | null;
@@ -53,6 +58,7 @@ export type StoreOrderDetail = {
     address: string | null;
   };
   items: StoreOrderItem[];
+  installments: StoreOrderInstallment[];
 };
 
 export function formatCustomerAddress(customer: StoreOrderDetail["customer"]) {

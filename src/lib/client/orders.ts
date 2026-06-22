@@ -37,6 +37,9 @@ export async function getStoreOrder(storeId: string, orderId: string) {
       total_amount,
       edited_at,
       created_at,
+      payment_mode,
+      installment_plan_status,
+      installment_card_mode,
       customers (
         id,
         full_name,
@@ -62,6 +65,20 @@ export async function getStoreOrder(storeId: string, orderId: string) {
           image_url,
           price_visible
         )
+      ),
+      store_order_installments (
+        id,
+        installment_number,
+        due_date,
+        amount,
+        paid,
+        paid_at,
+        payment_informed,
+        payment_proof_url,
+        payment_proof_name,
+        payment_reported_at,
+        vendor_payment_link,
+        vendor_payment_message
       )
     `
     )
@@ -99,6 +116,22 @@ export async function getStoreOrder(storeId: string, orderId: string) {
     } satisfies StoreOrderItem;
   });
 
+  const installments = (data.store_order_installments ?? [])
+    .map((row) => ({
+      id: row.id,
+      installment_number: row.installment_number,
+      due_date: row.due_date,
+      amount: Number(row.amount),
+      paid: Boolean(row.paid),
+      paid_at: row.paid_at,
+      payment_informed: Boolean(row.payment_informed),
+      payment_proof_url: row.payment_proof_url,
+      payment_proof_name: row.payment_proof_name,
+      vendor_payment_link: row.vendor_payment_link,
+      vendor_payment_message: row.vendor_payment_message
+    }))
+    .sort((a, b) => a.installment_number - b.installment_number);
+
   return {
     id: data.id,
     order_code: data.order_code,
@@ -113,6 +146,9 @@ export async function getStoreOrder(storeId: string, orderId: string) {
     payment_proof_url: data.payment_proof_url,
     payment_proof_name: data.payment_proof_name,
     payment_informed: Boolean(data.payment_informed),
+    payment_mode: data.payment_mode,
+    installment_plan_status: data.installment_plan_status,
+    installment_card_mode: data.installment_card_mode,
     quote_sent_at: data.quote_sent_at,
     customer_confirmed_at: data.customer_confirmed_at,
     payment_reported_at: data.payment_reported_at,
@@ -129,6 +165,7 @@ export async function getStoreOrder(storeId: string, orderId: string) {
     edited_at: data.edited_at,
     created_at: data.created_at,
     customer,
-    items
+    items,
+    installments
   } satisfies StoreOrderDetail;
 }
