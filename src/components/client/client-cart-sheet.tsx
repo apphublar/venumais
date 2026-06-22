@@ -7,6 +7,7 @@ import { ProductThumb } from "@/components/vendor/product-thumb";
 import { VendorIcon } from "@/components/vendor/icon";
 import type { ClientSessionCustomer } from "@/lib/client/actions";
 import { checkoutClientOrderAction } from "@/lib/client/actions";
+import { parseCartLineKey } from "@/lib/products/cart-keys";
 import { formatBRL, getEffectivePrice } from "@/lib/products/format";
 import { couponDiscount } from "@/lib/sales/format";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -71,11 +72,17 @@ export function ClientCartSheet({
   const items = useMemo(() => {
     return Object.entries(cart)
       .filter(([, qty]) => qty > 0)
-      .map(([productId, quantity]) => {
+      .map(([lineKey, quantity]) => {
+        const { productId, variation } = parseCartLineKey(lineKey);
         const product = products.find((p) => p.id === productId);
-        return product ? { product, quantity } : null;
+        return product ? { product, quantity, variation, lineKey } : null;
       })
-      .filter(Boolean) as Array<{ product: PublicProduct; quantity: number }>;
+      .filter(Boolean) as Array<{
+      product: PublicProduct;
+      quantity: number;
+      variation?: string;
+      lineKey: string;
+    }>;
   }, [cart, products]);
 
   const hasVisiblePrices = items.every(({ product }) => product.price_visible);
@@ -84,7 +91,15 @@ export function ClientCartSheet({
     () =>
       items.reduce((acc, { product, quantity }) => {
         if (!product.price_visible) return acc;
-        const price = getEffectivePrice({ price: product.price, promo_price: product.promo_price });
+        const price = getEffectivePrice(
+          {
+            price: product.price,
+            promo_price: product.promo_price,
+            wholesale_price: product.wholesale_price,
+            wholesale_min_qty: product.wholesale_min_qty
+          },
+          quantity
+        );
         return acc + price * quantity;
       }, 0),
     [items]
@@ -123,9 +138,9 @@ export function ClientCartSheet({
     return () => window.clearTimeout(timer);
   }, [couponCode, store.id]);
 
-  const removeItem = (productId: string) => {
+  const removeItem = (lineKey: string) => {
     const next = { ...cart };
-    delete next[productId];
+    delete next[lineKey];
     setCart(next);
   };
 
@@ -165,9 +180,10 @@ export function ClientCartSheet({
       fd.append(
         "items",
         JSON.stringify(
-          items.map(({ product, quantity }) => ({
+          items.map(({ product, quantity, variation }) => ({
             product_id: product.id,
-            quantity
+            quantity,
+            ...(variation ? { variation } : {})
           }))
         )
       );
@@ -241,10 +257,18 @@ export function ClientCartSheet({
         <div className="vendor-sheet-body">
           {step === "cart" ? (
             <>
-              {items.map(({ product, quantity }) => {
-                const price = getEffectivePrice({ price: product.price, promo_price: product.promo_price });
+              {items.map(({ product, quantity, variation, lineKey }) => {
+                const price = getEffectivePrice(
+                  {
+                    price: product.price,
+                    promo_price: product.promo_price,
+                    wholesale_price: product.wholesale_price,
+                    wholesale_min_qty: product.wholesale_min_qty
+                  },
+                  quantity
+                );
                 return (
-                  <div className="client-cart-item" key={product.id}>
+                  <div className="client-cart-item" key={lineKey}>
                     <ProductThumb
                       product={{ name: product.name, thumb_color: product.thumb_color, image_url: product.image_url }}
                       size={46}
@@ -253,12 +277,13 @@ export function ClientCartSheet({
                       <strong>{product.name}</strong>
                       <span>
                         {product.price_visible ? formatBRL(price) : "Sob orçamento"} · qtd {quantity}
+                        {variation ? ` · ${variation}` : ""}
                       </span>
                     </div>
                     <button
                       aria-label={`Remover ${product.name}`}
                       className="client-cart-item-remove"
-                      onClick={() => removeItem(product.id)}
+                      onClick={() => removeItem(lineKey)}
                       type="button"
                     >
                       <VendorIcon name="x" size={18} />

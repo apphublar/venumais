@@ -41,12 +41,27 @@ export function formatBRL(value: number) {
   }).format(value);
 }
 
-export function getEffectivePrice(product: {
-  price: number;
-  promo_price: number | null;
-}) {
+export function getEffectivePrice(
+  product: {
+    price: number;
+    promo_price: number | null;
+    wholesale_price?: number | null;
+    wholesale_min_qty?: number | null;
+  },
+  quantity = 1
+) {
   if (product.promo_price && product.promo_price > 0) {
     return product.promo_price;
+  }
+
+  if (
+    product.wholesale_price &&
+    product.wholesale_price > 0 &&
+    product.wholesale_min_qty &&
+    product.wholesale_min_qty > 0 &&
+    quantity >= product.wholesale_min_qty
+  ) {
+    return product.wholesale_price;
   }
 
   return product.price;

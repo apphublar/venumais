@@ -403,6 +403,15 @@
   line-height: 1.2;
 }
 
+.client-product-variations {
+  display: block;
+  margin-top: 2px;
+  color: var(--client-ink-3);
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .client-product-price {
   min-width: 0;
   color: var(--client-green-700);

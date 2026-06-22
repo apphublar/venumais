@@ -69,6 +69,10 @@ export type Product = {
   thumb_color: string;
   image_url: string | null;
   barcode: string | null;
+  height_cm: number | null;
+  width_cm: number | null;
+  length_cm: number | null;
+  weight_kg: number | null;
   variations: string[];
   created_by: string | null;
   created_at: string;

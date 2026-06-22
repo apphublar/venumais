@@ -20,6 +20,7 @@ export type PublicProduct = {
   price: number;
   promo_price: number | null;
   wholesale_price: number | null;
+  wholesale_min_qty: number | null;
   price_visible: boolean;
   featured: boolean;
   stock_qty: number;
@@ -93,6 +94,7 @@ export async function listPublicProducts(storeId: string) {
     price: Number(row.price),
     promo_price: row.promo_price === null ? null : Number(row.promo_price),
     wholesale_price: row.wholesale_price === null ? null : Number(row.wholesale_price),
+    wholesale_min_qty: row.wholesale_min_qty === null ? null : Number(row.wholesale_min_qty),
     stock_qty: Number(row.stock_qty),
     sell_without_stock: Boolean(row.sell_without_stock),
     stock_visible: row.stock_visible !== false,

@@ -1,4 +1,5 @@
 import type { Product } from "@/lib/database/types";
+import { normalizeProduct } from "@/lib/products/normalize";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function listStoreProducts(storeId: string) {
@@ -13,7 +14,7 @@ export async function listStoreProducts(storeId: string) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as Product[];
+  return (data ?? []).map((row) => normalizeProduct(row as Product));
 }
 
 export async function getStoreProduct(storeId: string, productId: string) {
@@ -29,7 +30,7 @@ export async function getStoreProduct(storeId: string, productId: string) {
     throw new Error(error.message);
   }
 
-  return data as Product | null;
+  return data ? normalizeProduct(data as Product) : null;
 }
 
 export async function countStoreProducts(storeId: string) {
@@ -57,7 +58,6 @@ export async function listLowStockProducts(storeId: string) {
     .from("products")
     .select("*")
     .eq("store_id", storeId)
-    .lte("stock_qty", 2)
     .order("stock_qty", { ascending: true })
     .order("name", { ascending: true });
 
@@ -65,5 +65,7 @@ export async function listLowStockProducts(storeId: string) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as Product[];
+  return (data ?? [])
+    .map((row) => normalizeProduct(row as Product))
+    .filter((product) => product.stock_qty <= product.min_stock_qty);
 }

@@ -33,6 +33,7 @@ export function ProductForm({
 }: ProductFormProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(product?.image_url ?? null);
+  const [photoCleared, setPhotoCleared] = useState(false);
   const [name, setName] = useState(product?.name ?? "");
   const [category, setCategory] = useState(product?.category ?? "");
   const [cost, setCost] = useState(product ? String(product.cost).replace(".", ",") : "");
@@ -57,6 +58,20 @@ export function ProductForm({
   const [stockVisible, setStockVisible] = useState(product?.stock_visible ?? true);
   const [featured, setFeatured] = useState(product?.featured ?? false);
   const [active, setActive] = useState(product?.active ?? true);
+  const [stockQty, setStockQty] = useState(String(product?.stock_qty ?? 0));
+  const [minStockQty, setMinStockQty] = useState(String(product?.min_stock_qty ?? 3));
+  const [heightCm, setHeightCm] = useState(
+    product?.height_cm != null ? String(product.height_cm).replace(".", ",") : ""
+  );
+  const [widthCm, setWidthCm] = useState(
+    product?.width_cm != null ? String(product.width_cm).replace(".", ",") : ""
+  );
+  const [lengthCm, setLengthCm] = useState(
+    product?.length_cm != null ? String(product.length_cm).replace(".", ",") : ""
+  );
+  const [weightKg, setWeightKg] = useState(
+    product?.weight_kg != null ? String(product.weight_kg).replace(".", ",") : ""
+  );
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [scannerHint, setScannerHint] = useState("Posicione o código de barras dentro da área da câmera.");
@@ -102,9 +117,18 @@ export function ProductForm({
       return;
     }
 
+    setPhotoCleared(false);
     const reader = new FileReader();
     reader.onload = () => setPhotoPreview(String(reader.result));
     reader.readAsDataURL(file);
+  }
+
+  function removePhoto() {
+    setPhotoPreview(null);
+    setPhotoCleared(Boolean(product?.image_url));
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   }
 
   const stopScanner = () => {
@@ -203,7 +227,7 @@ export function ProductForm({
   }, [scannerOpen]);
 
   return (
-    <form action={formAction} className="vendor-form-page-form">
+    <form action={formAction} className="vendor-form-page-form" encType="multipart/form-data">
       <VendorFormShell
         footer={
           <>
@@ -222,7 +246,15 @@ export function ProductForm({
           </>
         }
       >
-        <input accept="image/*" hidden onChange={onPhotoChange} ref={fileRef} type="file" />
+        <input
+          accept="image/*"
+          hidden
+          name="productImage"
+          onChange={onPhotoChange}
+          ref={fileRef}
+          type="file"
+        />
+        <input name="clearImage" type="hidden" value={photoCleared ? "on" : "off"} />
 
         <div className="vendor-photo-row">
           {photoPreview ? (
@@ -231,7 +263,7 @@ export function ProductForm({
               <img alt="" src={photoPreview} />
               <button
                 className="vendor-photo-remove"
-                onClick={() => setPhotoPreview(null)}
+                onClick={removePhoto}
                 type="button"
               >
                 <VendorIcon name="x" size={13} />
@@ -438,21 +470,23 @@ export function ProductForm({
           <label className="vendor-field">
             <span>Quantidade</span>
             <input
-              defaultValue={product?.stock_qty ?? 0}
               inputMode="numeric"
               min={0}
               name="stockQty"
+              onChange={(event) => setStockQty(event.target.value.replace(/\D/g, ""))}
               type="number"
+              value={stockQty}
             />
           </label>
           <label className="vendor-field">
             <span>Estoque mínimo</span>
             <input
-              defaultValue={product?.min_stock_qty ?? 3}
               inputMode="numeric"
               min={0}
               name="minStockQty"
+              onChange={(event) => setMinStockQty(event.target.value.replace(/\D/g, ""))}
               type="number"
+              value={minStockQty}
             />
           </label>
         </div>
@@ -554,8 +588,8 @@ export function ProductForm({
 
         {variationTags.length ? (
           <div className="vendor-variation-tags">
-            {variationTags.map((tag) => (
-              <span className="vendor-variation-tag" key={tag}>
+            {variationTags.map((tag, index) => (
+              <span className="vendor-variation-tag" key={`${tag}-${index}`}>
                 {tag}
               </span>
             ))}
@@ -573,7 +607,19 @@ export function ProductForm({
             <label className="vendor-field" key={name}>
               <span>{label}</span>
               <div className="vendor-money-box" style={{ padding: "10px 12px" }}>
-                <input inputMode="decimal" name={name} placeholder="0" type="text" />
+                <input
+                  inputMode="decimal"
+                  name={name}
+                  onChange={(event) => {
+                    const value = event.target.value.replace(/[^\d.,]/g, "");
+                    if (name === "heightCm") setHeightCm(value);
+                    if (name === "widthCm") setWidthCm(value);
+                    if (name === "lengthCm") setLengthCm(value);
+                  }}
+                  placeholder="0"
+                  type="text"
+                  value={name === "heightCm" ? heightCm : name === "widthCm" ? widthCm : lengthCm}
+                />
               </div>
             </label>
           ))}
@@ -582,7 +628,14 @@ export function ProductForm({
         <label className="vendor-field">
           <span>Peso (kg)</span>
           <div className="vendor-money-box">
-            <input inputMode="decimal" name="weightKg" placeholder="0,000" type="text" />
+            <input
+              inputMode="decimal"
+              name="weightKg"
+              onChange={(event) => setWeightKg(event.target.value.replace(/[^\d.,]/g, ""))}
+              placeholder="0,000"
+              type="text"
+              value={weightKg}
+            />
             <span>kg</span>
           </div>
         </label>

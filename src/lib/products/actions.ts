@@ -23,11 +23,61 @@ function productErrorMessage(message: string) {
     return "O nome precisa ter entre 2 e 160 caracteres.";
   }
 
+  if (normalized.includes("column") && normalized.includes("does not exist")) {
+    return "Atualize o banco de dados (migrations pendentes) e tente novamente.";
+  }
+
+  if (normalized.includes("row-level security") || normalized.includes("permission denied")) {
+    return "Você não tem permissão para gerenciar produtos nesta loja.";
+  }
+
   if (process.env.NODE_ENV === "development") {
     return `Erro técnico: ${message}`;
   }
 
   return "Não foi possível salvar o produto. Tente novamente.";
+}
+
+function parseOptionalDecimal(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = parseBRL(raw);
+  return parsed >= 0 ? parsed : null;
+}
+
+async function uploadProductImage(file: File, storeSlug: string, userId: string) {
+  const supabase = await getSupabaseServerClient();
+
+  if (!(file instanceof File) || file.size <= 0) {
+    return { error: "Selecione uma imagem válida." };
+  }
+
+  if (file.size > 3 * 1024 * 1024) {
+    return { error: "A imagem deve ter no máximo 3MB." };
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Formato inválido. Envie PNG, JPG, WEBP ou SVG." };
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const ext = safeName.includes(".") ? safeName.split(".").pop() : "png";
+  const filePath = `${userId}/${storeSlug}/product-${Date.now()}.${ext}`;
+  const upload = await supabase.storage.from("product-images").upload(filePath, file, {
+    cacheControl: "3600",
+    upsert: false
+  });
+
+  if (upload.error) {
+    return { error: "Não foi possível enviar a foto do produto." };
+  }
+
+  const { data } = supabase.storage.from("product-images").getPublicUrl(filePath);
+  return { url: data.publicUrl };
 }
 
 function parseProductForm(formData: FormData) {
@@ -58,6 +108,10 @@ function parseProductForm(formData: FormData) {
   const active = formData.get("active") !== "off";
   const variations = parseVariations(String(formData.get("variations") ?? ""));
   const barcode = String(formData.get("barcode") ?? "").trim();
+  const heightCm = parseOptionalDecimal(formData.get("heightCm"));
+  const widthCm = parseOptionalDecimal(formData.get("widthCm"));
+  const lengthCm = parseOptionalDecimal(formData.get("lengthCm"));
+  const weightKg = parseOptionalDecimal(formData.get("weightKg"));
 
   if (name.length < 2) {
     return { error: "Informe o nome do produto." };
@@ -82,9 +136,32 @@ function parseProductForm(formData: FormData) {
       featured,
       active,
       variations,
-      barcode: barcode || null
+      barcode: barcode || null,
+      height_cm: heightCm,
+      width_cm: widthCm,
+      length_cm: lengthCm,
+      weight_kg: weightKg
     }
   };
+}
+
+async function resolveProductImageUrl(
+  formData: FormData,
+  storeSlug: string,
+  userId: string
+): Promise<{ url?: string | null; error?: string }> {
+  const clearImage = formData.get("clearImage") === "on";
+  const imageFile = formData.get("productImage");
+
+  if (imageFile instanceof File && imageFile.size > 0) {
+    return uploadProductImage(imageFile, storeSlug, userId);
+  }
+
+  if (clearImage) {
+    return { url: null };
+  }
+
+  return {};
 }
 
 export async function createProductAction(
@@ -98,6 +175,11 @@ export async function createProductAction(
     return { error: parsed.error };
   }
 
+  const image = await resolveProductImageUrl(formData, store.slug, user.id);
+  if (image.error) {
+    return { error: image.error };
+  }
+
   const supabase = await getSupabaseServerClient();
   const total = await countStoreProducts(store.id);
 
@@ -107,7 +189,8 @@ export async function createProductAction(
       store_id: store.id,
       created_by: user.id,
       thumb_color: pickThumbColor(total),
-      ...parsed.data
+      ...parsed.data,
+      ...(image.url !== undefined ? { image_url: image.url } : {})
     })
     .select("id")
     .single();
@@ -118,6 +201,7 @@ export async function createProductAction(
 
   revalidatePath("/painel/estoque");
   revalidatePath("/painel");
+  revalidatePath(`/loja/${store.slug}`);
   return { redirectTo: `/painel/estoque/${data.id}` };
 }
 
@@ -126,17 +210,25 @@ export async function updateProductAction(
   _prevState: ProductActionState,
   formData: FormData
 ): Promise<ProductActionState> {
-  const { store } = await requireStoreAccess();
+  const { store, user } = await requireStoreAccess();
   const parsed = parseProductForm(formData);
 
   if ("error" in parsed) {
     return { error: parsed.error };
   }
 
+  const image = await resolveProductImageUrl(formData, store.slug, user.id);
+  if (image.error) {
+    return { error: image.error };
+  }
+
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase
     .from("products")
-    .update(parsed.data)
+    .update({
+      ...parsed.data,
+      ...(image.url !== undefined ? { image_url: image.url } : {})
+    })
     .eq("id", productId)
     .eq("store_id", store.id);
 
@@ -147,6 +239,7 @@ export async function updateProductAction(
   revalidatePath("/painel/estoque");
   revalidatePath(`/painel/estoque/${productId}`);
   revalidatePath("/painel");
+  revalidatePath(`/loja/${store.slug}`);
   return { redirectTo: `/painel/estoque/${productId}` };
 }
 
@@ -166,6 +259,7 @@ export async function deleteProductAction(productId: string) {
 
   revalidatePath("/painel/estoque");
   revalidatePath("/painel");
+  revalidatePath(`/loja/${store.slug}`);
   redirect("/painel/estoque");
 }
 

@@ -6,6 +6,11 @@ import { StoreBrandLogo } from "@/components/client/store-brand-logo";
 import { VendorIcon } from "@/components/vendor/icon";
 import { ProductThumb } from "@/components/vendor/product-thumb";
 import type { ClientSessionCustomer } from "@/lib/client/actions";
+import {
+  buildCartLineKey,
+  parseCartLineKey,
+  productCartQuantity
+} from "@/lib/products/cart-keys";
 import { formatBRL, getEffectivePrice } from "@/lib/products/format";
 import type { PublicProduct, PublicStore } from "@/lib/client/queries";
 import { getCustomerInitials } from "@/lib/customers/format";
@@ -44,6 +49,7 @@ export function ClientCatalog({
   const [category, setCategory] = useState("todas");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [variationPicker, setVariationPicker] = useState<PublicProduct | null>(null);
 
   const categories = useMemo(
     () => ["todas", ...Array.from(new Set(products.map((product) => product.category)))],
@@ -71,20 +77,59 @@ export function ClientCatalog({
   const cartCount = Object.values(cart).reduce((total, qty) => total + qty, 0);
   const customerInitial = customer ? getCustomerInitials(customer.full_name) : "C";
 
-  const adjustCart = (productId: string, delta: number) => {
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-
+  const adjustCartLine = (lineKey: string, product: PublicProduct, delta: number) => {
     setCart((current) => {
-      const limit = maxCartQty(product);
-      const next = Math.max(0, Math.min(limit, (current[productId] ?? 0) + delta));
-      if (next === 0) {
+      const currentProductQty = productCartQuantity(current, product.id);
+      const lineQty = current[lineKey] ?? 0;
+
+      if (delta > 0 && !product.sell_without_stock && currentProductQty >= product.stock_qty) {
+        return current;
+      }
+
+      const nextQty = Math.max(0, lineQty + delta);
+      if (nextQty === 0) {
         const copy = { ...current };
-        delete copy[productId];
+        delete copy[lineKey];
         return copy;
       }
 
-      return { ...current, [productId]: next };
+      return { ...current, [lineKey]: nextQty };
+    });
+  };
+
+  const requestAddProduct = (product: PublicProduct) => {
+    if (maxCartQty(product) <= 0) {
+      return;
+    }
+
+    if (product.variations.length > 0) {
+      setVariationPicker(product);
+      return;
+    }
+
+    adjustCartLine(buildCartLineKey(product.id), product, 1);
+  };
+
+  const decreaseProduct = (product: PublicProduct) => {
+    setCart((current) => {
+      const keys = Object.keys(current).filter(
+        (key) => parseCartLineKey(key).productId === product.id && current[key] > 0
+      );
+
+      if (!keys.length) {
+        return current;
+      }
+
+      const lineKey = keys[keys.length - 1];
+      const next = { ...current };
+
+      if (next[lineKey] <= 1) {
+        delete next[lineKey];
+      } else {
+        next[lineKey] -= 1;
+      }
+
+      return next;
     });
   };
 
@@ -164,14 +209,18 @@ export function ClientCatalog({
 
       <div className="client-product-grid">
         {list.map((product) => {
-          const price = getEffectivePrice({
-            price: product.price,
-            promo_price: product.promo_price
-          });
-          const limit = maxCartQty(product);
-          const currentQty = cart[product.id] ?? 0;
+          const currentQty = productCartQuantity(cart, product.id);
           const atLimit = !product.sell_without_stock && currentQty >= product.stock_qty;
           const availability = stockLabel(product);
+          const displayPrice = getEffectivePrice(
+            {
+              price: product.price,
+              promo_price: product.promo_price,
+              wholesale_price: product.wholesale_price,
+              wholesale_min_qty: product.wholesale_min_qty
+            },
+            Math.max(1, currentQty)
+          );
 
           return (
             <article className="client-product-card" key={product.id}>
@@ -187,10 +236,16 @@ export function ClientCatalog({
               </div>
               <div className="client-product-body">
                 <strong>{product.name}</strong>
+                {product.variations.length ? (
+                  <span className="client-product-variations">
+                    {product.variations.slice(0, 3).join(" · ")}
+                    {product.variations.length > 3 ? "…" : ""}
+                  </span>
+                ) : null}
                 <div className="client-product-meta">
                   <div className="client-product-pricing">
                     {product.price_visible ? (
-                      <strong className="client-product-price">{formatBRL(price)}</strong>
+                      <strong className="client-product-price">{formatBRL(displayPrice)}</strong>
                     ) : (
                       <span className="client-product-quote">Sob orçamento</span>
                     )}
@@ -202,7 +257,7 @@ export function ClientCatalog({
                     <div className="client-product-qty-controls">
                       <button
                         className="client-qty-button"
-                        onClick={() => adjustCart(product.id, -1)}
+                        onClick={() => decreaseProduct(product)}
                         type="button"
                       >
                         <VendorIcon name="arrowDown" size={14} />
@@ -211,7 +266,7 @@ export function ClientCatalog({
                       <button
                         className="client-qty-button client-qty-button-primary"
                         disabled={atLimit}
-                        onClick={() => adjustCart(product.id, 1)}
+                        onClick={() => requestAddProduct(product)}
                         type="button"
                       >
                         <VendorIcon name="arrowUp" size={14} />
@@ -220,8 +275,8 @@ export function ClientCatalog({
                   ) : (
                     <button
                       className="client-product-add"
-                      disabled={limit <= 0}
-                      onClick={() => adjustCart(product.id, 1)}
+                      disabled={maxCartQty(product) <= 0}
+                      onClick={() => requestAddProduct(product)}
                       type="button"
                     >
                       <VendorIcon name="plus" size={17} />
@@ -239,6 +294,55 @@ export function ClientCatalog({
           <button onClick={() => setCartOpen(true)} type="button">
             <span>{cartCount}</span> Ver pedido <VendorIcon name="chevR" size={18} />
           </button>
+        </div>
+      ) : null}
+
+      {variationPicker ? (
+        <div className="vendor-sheet-backdrop" onClick={() => setVariationPicker(null)} role="presentation">
+          <div
+            aria-labelledby="variation-picker-title"
+            aria-modal="true"
+            className="vendor-sheet"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="vendor-sheet-handle" />
+            <div className="vendor-sheet-header">
+              <h2 id="variation-picker-title">Escolha a variação</h2>
+              <button
+                aria-label="Fechar"
+                className="vendor-sheet-close"
+                onClick={() => setVariationPicker(null)}
+                type="button"
+              >
+                <VendorIcon name="x" size={20} />
+              </button>
+            </div>
+            <div className="vendor-sheet-body" style={{ display: "grid", gap: 12 }}>
+              <p className="vendor-field-hint" style={{ margin: 0 }}>
+                {variationPicker.name}
+              </p>
+              <div className="vendor-chip-row">
+                {variationPicker.variations.map((variation, index) => (
+                  <button
+                    className="vendor-chip"
+                    key={`${variation}-${index}`}
+                    onClick={() => {
+                      adjustCartLine(
+                        buildCartLineKey(variationPicker.id, variation),
+                        variationPicker,
+                        1
+                      );
+                      setVariationPicker(null);
+                    }}
+                    type="button"
+                  >
+                    {variation}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 
