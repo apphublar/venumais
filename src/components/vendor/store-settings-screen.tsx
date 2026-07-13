@@ -6,9 +6,10 @@ import { VendorBrandMark } from "@/components/vendor/brand-mark";
 import { VendorIcon } from "@/components/vendor/icon";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";
 import { updateStoreAction, uploadStoreLogoAction } from "@/lib/stores/actions";
+import { DEFAULT_BRAND_COLOR } from "@/lib/stores/brand-color";
 import type { Store } from "@/lib/database/types";
 
-const BRAND_PRESETS = ["#11885b", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#0f766e"];
+const BRAND_PRESETS = [DEFAULT_BRAND_COLOR, "#9B8AFB", "#2563eb", "#db2777", "#ea580c", "#0f766e"];
 const BRAND_TEXT_PRESETS = ["#ffffff", "#f8fafc", "#1f2937", "#111827", "#0f172a"];
 const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://venumais.vercel.app").replace(/\/+$/, "");
 
@@ -17,7 +18,7 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
   const [tagline, setTagline] = useState(store.catalog_tagline ?? "");
   const [pixKey, setPixKey] = useState(store.pix_key ?? "");
   const [pixReceiver, setPixReceiver] = useState(store.pix_receiver_name ?? "");
-  const [brandColor, setBrandColor] = useState(store.brand_color ?? "#11885b");
+  const [brandColor, setBrandColor] = useState(store.brand_color ?? DEFAULT_BRAND_COLOR);
   const [brandTextColor, setBrandTextColor] = useState(store.brand_text_color ?? "#ffffff");
   const [logoUrl, setLogoUrl] = useState(store.logo_url ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -156,7 +157,7 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
           <input onChange={(event) => setName(event.target.value)} value={name} />
         </label>
 
-        <div className="vendor-section-label">Personalização da marca</div>
+        <div className="vendor-section-label">Personalização do catálogo</div>
 
         <div className="vendor-settings-brand-card">
           {logoPreviewUrl || logoUrl ? (
@@ -173,8 +174,8 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
             <VendorBrandMark label={name} onLight size={56} />
           )}
           <div className="vendor-settings-brand-copy">
-            <strong>Identidade da loja</strong>
-            <span>Essa aparência será aplicada no app do vendedor e no portal do cliente.</span>
+            <strong>Identidade do catálogo</strong>
+            <span>Essa aparência é aplicada só no catálogo que seus clientes acessam. O seu painel continua com a identidade padrão da VENUMAIS.</span>
           </div>
         </div>
 
@@ -221,7 +222,7 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
         </label>
 
         <label className="vendor-field">
-          <span>Cor principal da marca</span>
+          <span>Cor principal do catálogo</span>
           <div className="vendor-settings-color-input-row">
             <input
               className="vendor-settings-color-input"
@@ -231,7 +232,7 @@ export function StoreSettingsScreen({ store }: { store: Store }) {
             />
             <input
               onChange={(event) => setBrandColor(event.target.value)}
-              placeholder="#11885b"
+              placeholder="#6D5CE0"
               value={brandColor}
             />
           </div>

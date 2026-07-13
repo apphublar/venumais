@@ -1,4 +1,4 @@
-export const DEFAULT_BRAND_COLOR = "#11885b";
+export const DEFAULT_BRAND_COLOR = "#6D5CE0";
 export const DEFAULT_BRAND_TEXT_COLOR = "#ffffff";
 
 function hexToRgb(hex: string) {
@@ -34,7 +34,7 @@ function rgbToHex(color: { r: number; g: number; b: number }) {
 }
 
 export function getBrandColorVars(brandColor: string, brandTextColor?: string | null) {
-  const rgb = hexToRgb(brandColor) ?? hexToRgb("#11885b");
+  const rgb = hexToRgb(brandColor) ?? hexToRgb(DEFAULT_BRAND_COLOR);
   if (!rgb) {
     return {};
   }
@@ -45,24 +45,19 @@ export function getBrandColorVars(brandColor: string, brandTextColor?: string | 
 
   const light = mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.12);
   const dark = mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.18);
-  const gradientLight = mixRgb(rgb, { r: 255, g: 255, b: 255 }, 0.06);
-  const gradientDark = mixRgb(rgb, { r: 0, g: 0, b: 0 }, 0.24);
   const onHex = rgbToHex(onRgb);
   const onStrong = `${onRgb.r} ${onRgb.g} ${onRgb.b}`;
 
+  // Estas variáveis só existem em client.css (catálogo público do cliente).
+  // O painel do vendedor (vendor.css) nunca é personalizável — usa sempre
+  // a identidade padrão da VENUMAIS.
   return {
-    "--vendor-brand-on": onHex,
-    "--vendor-brand-on-rgb": onStrong,
     "--client-brand-on": onHex,
     "--client-brand-on-rgb": onStrong,
-    "--vendor-brand-g1": rgbToHex(gradientLight),
-    "--vendor-brand-g2": rgbToHex(gradientDark),
     "--client-brand-g1": rgbToHex(light),
     "--client-brand-g2": rgbToHex(dark),
     "--client-green-600": rgbToHex(light),
-    "--client-green-700": rgbToHex(dark),
-    "--vendor-green-600": rgbToHex(light),
-    "--vendor-green-700": rgbToHex(dark)
+    "--client-green-700": rgbToHex(dark)
   } as Record<string, string>;
 }
 

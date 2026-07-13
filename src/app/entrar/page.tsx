@@ -1,25 +1,22 @@
-import { redirect } from "next/navigation";
+import { VendorLoginPage } from "@/components/auth/vendor-login-page";
 
 type EntrarPageProps = {
   searchParams: Promise<{
-    mode?: string;
     next?: string;
-    error?: string;
+    tab?: string;
   }>;
 };
 
 export default async function EntrarPage({ searchParams }: EntrarPageProps) {
   const params = await searchParams;
-  const query = new URLSearchParams();
+  const initialTab = params.tab === "criar" ? "criar" : "entrar";
+  const nextPath = params.next ?? "/painel";
 
-  if (params.mode) {
-    query.set("mode", params.mode);
-  } else {
-    query.set("mode", "vendor");
-  }
-  if (params.next) {
-    query.set("next", params.next);
-  }
-
-  redirect(`/app?${query.toString()}`);
+  return (
+    <VendorLoginPage
+      initialTab={initialTab}
+      key={`${initialTab}:${nextPath}`}
+      nextPath={nextPath}
+    />
+  );
 }

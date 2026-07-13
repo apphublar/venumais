@@ -1,21 +1,24 @@
 @import "../styles/vendor.css";
 
 :root {
-  --client-bg: #f4f7f5;
-  --client-card: #ffffff;
-  --client-ink-1: #112019;
-  --client-ink-2: #3d4a44;
-  --client-ink-3: #7c8a83;
-  --client-line: #e8edea;
-  --client-line-2: #cbd5cf;
-  --client-chip: #eef2f0;
-  --client-green-50: #e7f6ef;
-  --client-green-600: #128a5d;
-  --client-green-700: #0e6e4a;
-  --client-brand-g1: #15a06a;
-  --client-brand-g2: #0d7a50;
-  --client-brand-on: #ffffff;
-  --client-brand-on-rgb: 255 255 255;
+  --client-bg: var(--ui-bg);
+  --client-card: var(--ui-card);
+  --client-ink-1: var(--ui-ink-1);
+  --client-ink-2: var(--ui-ink-2);
+  --client-ink-3: var(--ui-ink-3);
+  --client-line: var(--ui-line);
+  --client-line-2: var(--ui-line-2);
+  --client-chip: var(--ui-chip);
+  /* Valor padrão antes de qualquer personalização de catálogo pela loja.
+     Quando a loja personaliza (ver src/lib/stores/brand-color.ts), estas
+     variáveis são sobrescritas via inline style na página do catálogo. */
+  --client-green-50: var(--brand-50);
+  --client-green-600: var(--brand-600);
+  --client-green-700: var(--brand-700);
+  --client-brand-g1: var(--brand-600);
+  --client-brand-g2: var(--brand-700);
+  --client-brand-on: var(--brand-on);
+  --client-brand-on-rgb: var(--brand-on-rgb);
 }
 
 .client-app {
@@ -45,21 +48,6 @@
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
-.client-bottom-nav {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: min(480px, 100%);
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 6px 4px 8px;
-  background: var(--client-card);
-  border-top: 1px solid var(--client-line);
-  z-index: 20;
-}
-
 .client-nav-button {
   flex: 1;
   display: flex;
@@ -75,56 +63,14 @@
   cursor: pointer;
 }
 
-.client-nav-button-active {
-  color: var(--client-green-700);
-  font-weight: 800;
-}
-
-.client-nav-icon {
-  padding: 3px 14px;
-  border-radius: 999px;
-}
-
 .client-nav-button-active .client-nav-icon {
   background: var(--client-green-50);
-}
-
-.client-nav-badge {
-  position: absolute;
-  top: 2px;
-  right: calc(50% - 28px);
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #dc2626;
-  color: #fff;
-  font-style: normal;
-  font-size: 0.58rem;
-  font-weight: 800;
-  line-height: 16px;
-  text-align: center;
-}
-
-.client-nav-button {
-  position: relative;
 }
 
 .client-hero {
   padding: 16px 18px 18px;
   background: linear-gradient(135deg, var(--client-brand-g1), var(--client-brand-g2));
   color: var(--client-brand-on);
-}
-
-.client-hero-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.client-hero-copy {
-  flex: 1;
-  min-width: 0;
 }
 
 .client-hero-top > div:not(.client-hero-copy) {
@@ -209,12 +155,6 @@
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
-}
-
-.client-category-chip-active {
-  border-color: var(--client-green-600);
-  background: var(--client-green-600);
-  color: var(--client-brand-on);
 }
 
 .client-auth-page {
@@ -510,11 +450,6 @@
   border-bottom: 1px solid var(--client-line);
 }
 
-.client-cart-item-copy {
-  flex: 1;
-  min-width: 0;
-}
-
 .client-cart-item-copy strong,
 .client-cart-item-copy span {
   display: block;
@@ -591,15 +526,6 @@
   line-height: 1.45;
 }
 
-.client-cart-coupon-block {
-  margin-top: 14px;
-}
-
-.client-cart-coupon-row {
-  display: flex;
-  gap: 8px;
-}
-
 .client-cart-coupon-input {
   flex: 1;
   box-sizing: border-box;
@@ -613,10 +539,6 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   outline: none;
-}
-
-.client-cart-coupon-input-invalid {
-  border-color: #fbd5d5;
 }
 
 .client-cart-coupon-applied {
@@ -637,10 +559,6 @@
   color: #dc2626;
   font-size: 0.72rem;
   font-weight: 700;
-}
-
-.client-cart-totals {
-  margin-top: 14px;
 }
 
 .client-cart-total-line {
@@ -725,11 +643,6 @@
   padding: 10px 14px;
   border-radius: 12px;
   background: var(--client-bg-2);
-}
-
-.client-order-detail-item-copy {
-  flex: 1;
-  min-width: 0;
 }
 
 .client-order-detail-item-copy strong {
@@ -1175,23 +1088,9 @@
   line-height: 1.45;
 }
 
-.client-cart-installment-hint {
-  color: var(--client-ink-3);
-}
-
 .client-cart-installment-warning {
   color: #b45309;
   font-weight: 700;
-}
-
-.client-cart-card-mode {
-  margin-top: 14px;
-}
-
-.client-cart-card-mode-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
 }
 
 .client-cart-card-mode-btn {
@@ -1559,22 +1458,12 @@
   font-weight: 800;
 }
 
-.client-filter-chip-active {
-  border-color: var(--client-green-600);
-  background: var(--client-green-600);
-  color: var(--client-brand-on);
-}
-
 .client-empty-inline {
   padding: 24px 10px;
   color: var(--client-ink-3);
   font-size: 0.84rem;
   font-weight: 600;
   text-align: center;
-}
-
-.client-text-success {
-  color: var(--client-green-700);
 }
 
 .client-badge {
@@ -1585,31 +1474,11 @@
   white-space: nowrap;
 }
 
-.client-badge-warn {
-  background: #fef3c7;
-  color: #92660b;
-}
-
-.client-badge-open {
-  background: #dbeafe;
-  color: #1e478f;
-}
-
-.client-badge-paid {
-  background: var(--client-green-50);
-  color: var(--client-green-700);
-}
-
 .client-sale-card,
 .client-quote-card {
   margin-bottom: 10px;
   padding: 14px;
   text-align: left;
-}
-
-.client-quote-card {
-  background: #fffaf0;
-  border-color: #fde9c8;
 }
 
 .client-sale-card-head,
@@ -1797,29 +1666,9 @@
   font-weight: 800;
 }
 
-.client-installment-open {
-  background: #dbeafe;
-  color: #1e478f;
-}
-
-.client-installment-overdue {
-  background: #fee2e2;
-  color: #b1182a;
-}
-
 .client-installment-today {
   background: #fff7ed;
   color: #b45309;
-}
-
-.client-installment-paid {
-  background: var(--client-green-50);
-  color: var(--client-green-700);
-}
-
-.client-installment-copy {
-  flex: 1;
-  min-width: 0;
 }
 
 .client-installment-copy strong {
@@ -1838,24 +1687,9 @@
   font-weight: 800;
 }
 
-.client-status-badge-open {
-  background: #dbeafe;
-  color: #1e478f;
-}
-
-.client-status-badge-overdue {
-  background: #fee2e2;
-  color: #b1182a;
-}
-
 .client-status-badge-today {
   background: #fff7ed;
   color: #b45309;
-}
-
-.client-status-badge-paid {
-  background: var(--client-green-50);
-  color: var(--client-green-700);
 }
 
 .client-installment-pay {
@@ -2150,11 +1984,6 @@
   font-size: 0.84rem;
   font-weight: 700;
   line-height: 1.45;
-}
-
-.client-conta-inline-actions {
-  display: flex;
-  gap: 9px;
 }
 
 .client-conta-save {
@@ -2674,10 +2503,6 @@
   }
 }
 
-.client-order-chat-section {
-  margin-top: 16px;
-}
-
 .client-order-chat-toggle {
   display: inline-flex;
   align-items: center;
@@ -2717,12 +2542,12 @@
   color: var(--client-brand-on);
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 18px rgba(18, 138, 93, 0.4);
+  box-shadow: 0 6px 18px rgba(109, 92, 224, 0.4);
   cursor: pointer;
 }
 
 .client-fab-active {
-  box-shadow: 0 8px 22px rgba(18, 138, 93, 0.48);
+  box-shadow: 0 8px 22px rgba(109, 92, 224, 0.48);
 }
 
 .client-fab-label {
@@ -2753,10 +2578,6 @@
   text-align: center;
 }
 
-.client-chats-screen {
-  padding: 8px 16px 24px;
-}
-
 .client-chats-filter {
   border-color: var(--client-line);
   background: var(--client-card);
@@ -2778,10 +2599,6 @@
   background: var(--client-green-50);
   color: var(--client-green-700);
   flex-shrink: 0;
-}
-
-.client-chat-thread-body {
-  padding: 8px 16px 24px;
 }
 
 .client-lojas-tab {
@@ -2839,11 +2656,6 @@
   cursor: pointer;
 }
 
-.client-auth-quick-link {
-  display: grid;
-  gap: 12px;
-}
-
 .client-auth-quick-link p {
   margin: 0;
   color: var(--client-ink-2);
@@ -2863,7 +2675,7 @@
 }
 
 .client-fab-active {
-  box-shadow: 0 8px 22px rgba(18, 138, 93, 0.48);
+  box-shadow: 0 8px 22px rgba(109, 92, 224, 0.48);
 }
 
 .client-lojas-hint {
