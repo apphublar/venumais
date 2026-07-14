@@ -18,6 +18,29 @@
   --vendor-brand-on: var(--brand-on);
   --vendor-brand-on-rgb: var(--brand-on-rgb);
 }
+.vendor-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  width: 100%;
+}
+
+.vendor-page-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 3px solid var(--brand-100);
+  border-top-color: var(--brand-600);
+  animation: vendor-spin 0.7s linear infinite;
+}
+
+@keyframes vendor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 
 .vendor-app {
   min-height: 100vh;

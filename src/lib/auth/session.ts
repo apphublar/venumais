@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Profile, Store, UserStore } from "@/lib/database/types";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -14,19 +15,19 @@ export async function getCurrentUser() {
   }
 
   return user;
-}
+});
 
 export async function requireUser(nextPath = "/painel") {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/app?next=${encodeURIComponent(nextPath)}`);
+    redirect(`/entrar?next=${encodeURIComponent(nextPath)}`);
   }
 
   return user;
 }
 
-export async function getCurrentProfile(userId: string): Promise<Profile | null> {
+export const getCurrentProfile = cache(async (userId: string): Promise<Profile | null> => {
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase
     .from("profiles")
@@ -35,9 +36,9 @@ export async function getCurrentProfile(userId: string): Promise<Profile | null>
     .maybeSingle();
 
   return data;
-}
+});
 
-export async function getActiveStore(userId: string): Promise<UserStore | null> {
+export const getActiveStore = cache(async (userId: string): Promise<UserStore | null> => {
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase
     .from("store_members")
@@ -60,9 +61,9 @@ export async function getActiveStore(userId: string): Promise<UserStore | null> 
     role: data.role,
     ...store
   };
-}
+});
 
-export async function requireStoreAccess() {
+export const requireStoreAccess = cache(async () => {
   const user = await requireUser();
   const [profile, store] = await Promise.all([
     getCurrentProfile(user.id),
@@ -74,4 +75,4 @@ export async function requireStoreAccess() {
   }
 
   return { user, profile, store };
-}
+});

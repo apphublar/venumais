@@ -27,7 +27,13 @@ export default async function ClienteDetalhePage({
   const { store } = await requireStoreAccess();
   const { id } = await params;
   const query = await searchParams;
-  const customer = await getStoreCustomer(store.id, id);
+
+  const [customer, paymentSummary, sales, accountChangeRequests] = await Promise.all([
+    getStoreCustomer(store.id, id),
+    getCustomerPaymentSummary(store.id, id),
+    listCustomerSales(store.id, id),
+    listCustomerAccountChangeRequests(store.id, id)
+  ]);
 
   if (!customer) {
     notFound();
@@ -39,12 +45,6 @@ export default async function ClienteDetalhePage({
     "use server";
     await deleteCustomerAction(customerId);
   }
-
-  const [paymentSummary, sales, accountChangeRequests] = await Promise.all([
-    getCustomerPaymentSummary(store.id, customer.id),
-    listCustomerSales(store.id, customer.id),
-    listCustomerAccountChangeRequests(store.id, customer.id)
-  ]);
 
   const updateAction = updateCustomerAction.bind(null, customer.id);
 
