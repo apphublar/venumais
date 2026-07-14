@@ -1057,7 +1057,7 @@ button.vendor-card {
 
 .vendor-button-whats {
   border: none;
-  background: #25d366;
+  background: var(--whatsapp);
   color: #fff;
 }
 
@@ -2277,7 +2277,7 @@ button.vendor-card {
   min-height: 44px;
   margin-top: 12px;
   border-radius: 12px;
-  background: var(--vendor-green-600);
+  background: var(--whatsapp);
   color: #fff;
   font-size: 0.92rem;
   font-weight: 800;
@@ -3864,7 +3864,7 @@ button.vendor-card {
 
 .vendor-icon-button-whats {
   border: none;
-  background: #25d366;
+  background: var(--whatsapp);
   color: #fff;
 }
 
@@ -4159,7 +4159,7 @@ button.vendor-card {
   padding: 5px 11px;
   border: none;
   border-radius: 999px;
-  background: #25d366;
+  background: var(--whatsapp);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -4659,7 +4659,7 @@ button.vendor-card {
   padding: 8px 12px;
   border: none;
   border-radius: 999px;
-  background: #25d366;
+  background: var(--whatsapp);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 800;
@@ -4996,6 +4996,22 @@ button.vendor-card {
   margin-top: 16px;
 }
 
+
+.vendor-cobranca-whats-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--whatsapp);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
 .vendor-recibo-actions .vendor-cobranca-whats-btn,
 .vendor-recibo-actions .vendor-button {
   flex: 1;

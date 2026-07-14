@@ -34,4 +34,8 @@
   --ui-line: #e8edea;
   --ui-line-2: #cbd5cf;
   --ui-chip: #eef2f0;
+
+  /* Verde oficial do WhatsApp — usado só em ações/botões de WhatsApp,
+     nunca como cor de marca. Não deve ser trocado por --brand-*. */
+  --whatsapp: #25d366;
 }
