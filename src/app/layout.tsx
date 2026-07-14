@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Hanken_Grotesk, Geist_Mono } from "next/font/google";
 import { PwaRegister } from "@/components/pwa/pwa-register";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const appSans = Hanken_Grotesk({ variable: "--font-app-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#11885b",
+  themeColor: "#6D5CE0",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover"
@@ -41,7 +41,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html className={`${geistSans.variable} ${geistMono.variable}`} lang="pt-BR">
+    <html className={`${appSans.variable} ${geistMono.variable}`} lang="pt-BR">
       <body>
         <PwaRegister />
         {children}

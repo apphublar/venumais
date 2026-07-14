@@ -106,7 +106,7 @@ export function ClientPortalApp({
   };
 
   const switchStore = () => {
-    router.push("/app?mode=client&step=stores");
+    router.push("/cliente?step=stores");
   };
 
   const openConfirmSale = (saleId: string) => {

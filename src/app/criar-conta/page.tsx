@@ -43,7 +43,7 @@ export default async function CriarContaPage({ searchParams }: CriarContaPagePro
       <CreateStoreForm
         footer={
           <p>
-            Já possui conta? <Link href="/app">Entrar</Link>
+            Já possui conta? <Link href="/entrar">Entrar</Link>
           </p>
         }
       />

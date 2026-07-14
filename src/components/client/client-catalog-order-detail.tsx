@@ -280,7 +280,7 @@ export function ClientCatalogOrderDetail({
                   <ProductThumb
                     product={{
                       name: item.product_name,
-                      thumb_color: product?.thumb_color ?? "#11885b",
+                      thumb_color: product?.thumb_color ?? "#6D5CE0",
                       image_url: product?.image_url ?? null
                     }}
                     size={46}

@@ -19,7 +19,7 @@ export function VendorSaleRow({ sale }: { sale: SaleWithRelations }) {
   const installment = sale.payment_mode === "installment";
   const fromVendor = Boolean(sale.created_by);
   const customerName = sale.customer?.full_name ?? "Cliente";
-  const avatarColor = sale.customer?.avatar_color ?? "#11885b";
+  const avatarColor = sale.customer?.avatar_color ?? "#6D5CE0";
 
   return (
     <Link href={`/painel/vendas/${sale.id}`}>

@@ -116,7 +116,7 @@ export function ClientAuth({
         <button
           aria-label="Voltar"
           className="client-auth-back"
-          onClick={() => router.push("/app?mode=client")}
+          onClick={() => router.push("/cliente")}
           type="button"
         >
           <VendorIcon name="chevL" size={20} />
@@ -152,7 +152,7 @@ export function ClientAuth({
             </button>
             <button
               className="client-auth-switch-account"
-              onClick={() => router.push("/app?mode=client")}
+              onClick={() => router.push("/cliente")}
               type="button"
             >
               Usar outra conta
