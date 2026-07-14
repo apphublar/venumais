@@ -33,13 +33,15 @@ export default async function ProdutoDetalhePage({
   const { store } = await requireStoreAccess();
   const { id } = await params;
   const query = await searchParams;
-  const product = await getStoreProduct(store.id, id);
+  const [product, categories] = await Promise.all([
+    getStoreProduct(store.id, id),
+    listStoreProductCategories(store.id)
+  ]);
 
   if (!product) {
     notFound();
   }
 
-  const categories = await listStoreProductCategories(store.id);
   const updateAction = updateProductAction.bind(null, product.id);
   const deleteAction = deleteProductAction.bind(null, product.id);
   const decreaseStock = adjustProductStockAction.bind(null, product.id, -1);
