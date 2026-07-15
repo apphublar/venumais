@@ -20,7 +20,7 @@ export function VendorOrderCustomerPanel({
   order: StoreOrderDetail;
   storeId: string;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const customer = order.customer;
   const address = formatCustomerAddress(customer);

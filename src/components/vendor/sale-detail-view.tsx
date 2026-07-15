@@ -9,6 +9,7 @@ import { OcorrenciaSheet } from "@/components/vendor/ocorrencia-sheet";
 import { RegistrarPagamentoSheet } from "@/components/vendor/registrar-pagamento-sheet";
 import { VendorSaleBadge } from "@/components/vendor/sale-badge";
 import { VendorIcon } from "@/components/vendor/icon";
+import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
 import { VendorWhatsLogo } from "@/components/vendor/whats-logo";
 import { formatBRL } from "@/lib/products/format";
 import { markInstallmentPaidAction } from "@/lib/sales/actions";
@@ -105,8 +106,13 @@ export function SaleDetailView({
 
   return (
     <>
-      {/* Badges row — status + mode + method */}
+      {/* Badges row — origin + status + mode + method */}
       <div className="vendor-sale-detail-badges">
+        <VendorOrderOriginTag createdBy={sale.created_by} />
+        <span className="vendor-order-delivery">
+          <VendorIcon name={sale.delivery_type === "delivery" ? "truck" : "store"} size={12} />
+          {sale.delivery_type === "delivery" ? "Entrega" : "Retirada"}
+        </span>
         <VendorSaleBadge status={status} />
         <span
           className="vendor-sale-detail-mode-badge"

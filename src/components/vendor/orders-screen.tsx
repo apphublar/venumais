@@ -10,7 +10,7 @@ import { VendorWhatsLogo } from "@/components/vendor/whats-logo";
 import { formatBRL } from "@/lib/products/format";
 import type { CancelledStoreOrder, VendorStoreOrder } from "@/lib/client/queries";
 import { getCustomerInitials } from "@/lib/customers/format";
-import { formatShortDate, getSaleStatus } from "@/lib/sales/format";
+import { formatSaleDate, getSaleStatus } from "@/lib/sales/format";
 import type { SaleWithRelations } from "@/lib/sales/types";
 
 function todayISO() {
@@ -235,13 +235,12 @@ export function OrdersScreen({
                   color={order.customer_avatar_color}
                   label={getCustomerInitials(order.customer_full_name)}
                   size={40}
-                  square
                 />
                 <div className="vendor-cancelled-card-copy">
                   <strong>{order.customer_full_name}</strong>
                   <span>
                     #{String(order.order_code).padStart(4, "0")} · cancelado{" "}
-                    {order.cancelled_at ? formatShortDate(order.cancelled_at.slice(0, 10)) : ""}
+                    {order.cancelled_at ? formatSaleDate(order.cancelled_at) : ""}
                   </span>
                 </div>
                 <span className="vendor-cancelled-badge">Cancelado</span>

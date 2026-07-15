@@ -3,6 +3,7 @@ import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
 import { VendorIcon } from "@/components/vendor/icon";
+import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
 import { VendorSaleBadge } from "@/components/vendor/sale-badge";
 import { getCustomerInitials } from "@/lib/customers/format";
 import { formatBRL } from "@/lib/products/format";
@@ -17,7 +18,6 @@ export function VendorSaleRow({ sale }: { sale: SaleWithRelations }) {
   const status = getSaleStatus(sale.installments);
   const itemCount = sale.items.reduce((total, item) => total + item.quantity, 0);
   const installment = sale.payment_mode === "installment";
-  const fromVendor = Boolean(sale.created_by);
   const customerName = sale.customer?.full_name ?? "Cliente";
   const avatarColor = sale.customer?.avatar_color ?? "#6D5CE0";
 
@@ -46,10 +46,7 @@ export function VendorSaleRow({ sale }: { sale: SaleWithRelations }) {
           </div>
         </div>
         <div className="vendor-sale-row-meta">
-          <span className="vendor-order-origin">
-            <VendorIcon name={fromVendor ? "store" : "box"} size={11} />
-            {fromVendor ? "Pela loja" : "Via catálogo"}
-          </span>
+          <VendorOrderOriginTag createdBy={sale.created_by} small />
           <span className="vendor-order-delivery">
             <VendorIcon name={sale.delivery_type === "delivery" ? "truck" : "store"} size={12} />
             {sale.delivery_type === "delivery" ? "Entrega" : "Retirada"}

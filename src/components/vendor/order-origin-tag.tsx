@@ -1,22 +1,41 @@
 import { VendorIcon } from "@/components/vendor/icon";
 
 const ORIGIN_META = {
-  client: { label: "Pelo cliente", className: "vendor-order-origin-client", icon: "user" as const },
-  vendor: { label: "Pelo vendedor", className: "vendor-order-origin-vendor", icon: "store" as const }
+  client: {
+    label: "Pelo cliente",
+    className: "vendor-order-origin-client",
+    icon: "user" as const
+  },
+  vendor: {
+    label: "Pela loja",
+    className: "vendor-order-origin-vendor",
+    icon: "store" as const
+  }
 };
 
+export function isVendorOrigin(source?: string | null, createdBy?: string | null) {
+  if (createdBy) {
+    return true;
+  }
+  return source === "vendor" || source === "seller";
+}
+
 export function VendorOrderOriginTag({
-  source,
-  small = false
+  createdBy,
+  small = false,
+  source
 }: {
-  source?: string | null;
+  createdBy?: string | null;
   small?: boolean;
+  source?: string | null;
 }) {
-  const fromVendor = source === "vendor" || source === "seller";
+  const fromVendor = isVendorOrigin(source, createdBy);
   const meta = fromVendor ? ORIGIN_META.vendor : ORIGIN_META.client;
 
   return (
-    <span className={`vendor-order-origin ${meta.className}${small ? " vendor-order-origin-small" : ""}`}>
+    <span
+      className={`vendor-order-origin ${meta.className}${small ? " vendor-order-origin-small" : ""}`}
+    >
       <VendorIcon name={meta.icon} size={small ? 10 : 11} />
       {meta.label}
     </span>

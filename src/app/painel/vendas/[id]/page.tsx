@@ -49,7 +49,7 @@ export default async function VendaDetalhePage({
           <Link href={`/painel/clientes/${sale.customer.id}`}>
             <VendorCard className="vendor-sale-customer-card">
               <VendorAvatar
-                color={sale.customer.avatar_color ?? "#22a06b"}
+                color={sale.customer.avatar_color ?? "#6D5CE0"}
                 label={sale.customer.full_name[0].toUpperCase()}
                 size={44}
               />

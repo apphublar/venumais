@@ -3,6 +3,7 @@ import { OrderDetailView } from "@/components/vendor/order-detail-view";
 import { VendorScreenHeader } from "@/components/vendor/screen-header";
 import { getStoreOrder } from "@/lib/client/orders";
 import { requireStoreAccess } from "@/lib/auth/session";
+import { formatSaleDate } from "@/lib/sales/format";
 
 type PedidoDetalhePageProps = {
   params: Promise<{ id: string }>;
@@ -39,11 +40,7 @@ export default async function PedidoDetalhePage({ params }: PedidoDetalhePagePro
     <>
       <VendorScreenHeader
         backHref="/painel/pedidos"
-        subtitle={`${order.customer.full_name} · ${new Date(order.created_at).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric"
-        })}`}
+        subtitle={formatSaleDate(order.created_at)}
         title={orderHeaderTitle(order)}
       />
       <OrderDetailView order={order} storeId={store.id} />

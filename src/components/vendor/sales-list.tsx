@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { VendorCard } from "@/components/vendor/card";
 import { VendorIcon } from "@/components/vendor/icon";
+import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
 import { formatBRL } from "@/lib/products/format";
 import {
   formatSaleCode,
@@ -48,7 +49,6 @@ export function SalesList({ sales }: { sales: SaleWithRelations[] }) {
           {filtered.map((sale) => {
             const status = getSaleStatus(sale.installments);
             const openAmount = getOpenAmount(sale.installments);
-            const fromVendor = Boolean(sale.created_by);
 
             return (
               <Link href={`/painel/vendas/${sale.id}`} key={sale.id}>
@@ -59,10 +59,7 @@ export function SalesList({ sales }: { sales: SaleWithRelations[] }) {
                       {sale.customer?.full_name ?? "Cliente"} · {formatSaleDate(sale.sold_at)}
                     </span>
                     <div className="vendor-sale-row-meta">
-                      <span className="vendor-order-origin">
-                        <VendorIcon name={fromVendor ? "store" : "box"} size={11} />
-                        {fromVendor ? "Pela loja" : "Via catálogo"}
-                      </span>
+                      <VendorOrderOriginTag createdBy={sale.created_by} small />
                       <span className="vendor-order-delivery">
                         <VendorIcon name={sale.delivery_type === "delivery" ? "truck" : "store"} size={12} />
                         {sale.delivery_type === "delivery" ? "Entrega" : "Retirada"}

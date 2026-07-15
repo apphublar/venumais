@@ -9,25 +9,11 @@ import { VendorOrderOriginTag } from "@/components/vendor/order-origin-tag";
 import { getVendorOrderPaymentBadge } from "@/lib/client/order-status";
 import { getCustomerInitials } from "@/lib/customers/format";
 import { formatBRL } from "@/lib/products/format";
-import { formatShortDate } from "@/lib/sales/format";
+import { formatSaleDate } from "@/lib/sales/format";
 import type { VendorStoreOrder } from "@/lib/client/queries";
 import type { SaleInstallment } from "@/lib/sales/types";
 
-function orderStatusLabel(order: VendorStoreOrder) {
-  if (order.order_type === "wholesale") {
-    return { label: "Encomenda", tone: "wholesale" as const };
-  }
-  if (order.status === "quote" || order.order_type === "quote") {
-    return { label: "Orçamento", tone: "quote" as const };
-  }
-  if (order.status === "awaiting_installment_approval") {
-    return { label: "Parcelado", tone: "new" as const };
-  }
-  return { label: "Novo pedido", tone: "new" as const };
-}
-
 export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
-  const status = orderStatusLabel(order);
   const installment = order.payment_mode === "installment";
   const installmentCount = order.installments?.length ?? 0;
   const paymentBadge = getVendorOrderPaymentBadge(order);
@@ -35,37 +21,43 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
     order.status === "quote" ||
     order.order_type === "quote" ||
     order.order_type === "wholesale";
+  const quoteLabel =
+    order.order_type === "wholesale"
+      ? "Encomenda"
+      : order.status === "quote" || order.order_type === "quote"
+        ? "Orçamento"
+        : "Novo pedido";
 
   return (
     <Link href={`/painel/pedidos/${order.id}`}>
-      <VendorCard className="vendor-order-row">
-        <div className="vendor-order-row-main">
+      <VendorCard className="vendor-sale-row">
+        <div className="vendor-sale-row-main">
           <VendorAvatar
             color={order.customer_avatar_color}
             label={getCustomerInitials(order.customer_full_name)}
             size={42}
-            square
           />
-          <div className="vendor-order-row-copy">
+          <div className="vendor-sale-row-copy">
             <strong>{order.customer_full_name}</strong>
             <span>
-              #{String(order.order_code).padStart(4, "0")} · {order.item_count}{" "}
-              {order.item_count === 1 ? "item" : "itens"} · {formatShortDate(order.created_at)}
-              {installment && installmentCount > 0 ? (
-                <>
-                  {" "}
-                  ·{" "}
-                  <em className="vendor-sale-row-installment">{installmentCount}x</em>
-                </>
-              ) : null}
+              #{String(order.order_code).padStart(4, "0")} · {formatSaleDate(order.created_at)} ·{" "}
+              {order.item_count} {order.item_count === 1 ? "item" : "itens"} ·{" "}
+              <em className={installment && installmentCount > 0 ? "vendor-sale-row-installment" : "vendor-sale-row-cash"}>
+                {installment && installmentCount > 0 ? `${installmentCount}x` : "À vista"}
+              </em>
             </span>
           </div>
           {showQuoteBadge ? (
-            <span className={`vendor-order-status vendor-order-status-${status.tone}`}>
-              {status.label}
-            </span>
+            <div className="vendor-sale-row-side">
+              <strong>
+                {order.total_amount !== null ? formatBRL(order.total_amount) : "A combinar"}
+              </strong>
+              <span className={`vendor-order-status vendor-order-status-${order.order_type === "wholesale" ? "wholesale" : order.status === "quote" || order.order_type === "quote" ? "quote" : "new"}`}>
+                {quoteLabel}
+              </span>
+            </div>
           ) : (
-            <div className="vendor-order-row-side">
+            <div className="vendor-sale-row-side">
               <strong>
                 {order.total_amount !== null ? formatBRL(order.total_amount) : "A combinar"}
               </strong>
@@ -77,7 +69,7 @@ export function VendorOrderRow({ order }: { order: VendorStoreOrder }) {
           )}
         </div>
 
-        <div className="vendor-order-row-meta">
+        <div className="vendor-sale-row-meta">
           <VendorOrderOriginTag small source={order.source} />
           <span className="vendor-order-delivery">
             <VendorIcon name={order.delivery_type === "delivery" ? "truck" : "store"} size={12} />

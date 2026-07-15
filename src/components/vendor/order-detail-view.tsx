@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { VendorAvatar } from "@/components/vendor/avatar";
 import { VendorOrderCustomerPanel } from "@/components/vendor/vendor-order-customer-panel";
 import { VendorCrediarioProgress } from "@/components/vendor/crediario-progress";
 import { VendorCard } from "@/components/vendor/card";
@@ -19,10 +20,11 @@ import {
   setStoreOrderPaymentLinkAction
 } from "@/lib/client/order-actions";
 import { formatCustomerAddress, type StoreOrderDetail } from "@/lib/client/order-types";
-import { getOrderStatusMeta, PAYMENT_META } from "@/lib/client/order-status";
+import { getOrderStatusMeta, getVendorOrderPaymentBadge, PAYMENT_META } from "@/lib/client/order-status";
 import { brStr, formatShortDate } from "@/lib/sales/format";
 import type { SaleInstallment } from "@/lib/sales/types";
 import { formatBRL, parseBRL } from "@/lib/products/format";
+import { formatPhoneDisplay, getCustomerInitials } from "@/lib/customers/format";
 
 export function OrderDetailView({
   order,
@@ -232,8 +234,29 @@ export function OrderDetailView({
 
   return (
     <>
-      <section className="vendor-order-detail">
-        <div className="vendor-order-detail-tags">
+      <section className="vendor-screen-body vendor-order-detail-body">
+        <Link href={`/painel/clientes/${order.customer.id}`}>
+          <VendorCard className="vendor-sale-customer-card">
+            <VendorAvatar
+              color={order.customer.avatar_color || "#6D5CE0"}
+              label={getCustomerInitials(order.customer.full_name)}
+              size={44}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <strong>{order.customer.full_name}</strong>
+              <span>
+                {order.customer.phone
+                  ? formatPhoneDisplay(order.customer.phone)
+                  : "Sem WhatsApp"}
+              </span>
+            </div>
+            <span style={{ color: "var(--vendor-ink-3)", display: "flex" }}>
+              <VendorIcon name="chevR" size={20} />
+            </span>
+          </VendorCard>
+        </Link>
+
+        <div className="vendor-sale-detail-badges">
           <VendorOrderOriginTag source={order.source} />
           <span className="vendor-order-delivery">
             <VendorIcon name={order.delivery_type === "delivery" ? "truck" : "store"} size={12} />
@@ -243,24 +266,29 @@ export function OrderDetailView({
             <span className="vendor-order-status vendor-order-status-wholesale">Encomenda atacado</span>
           ) : null}
           {!isPricingScreen ? (() => {
-            const m = getOrderStatusMeta(order.status);
+            const paymentBadge = getVendorOrderPaymentBadge(order);
+            const statusMeta = getOrderStatusMeta(order.status);
+            const usePaymentBadge = ["paid", "delivering", "delivered"].includes(order.status)
+              || order.payment_mode === "installment"
+              || order.status === "awaiting_installment_approval";
+
+            if (usePaymentBadge) {
+              return (
+                <span className={`vendor-sale-badge ${paymentBadge.className}`.trim()}>
+                  <span aria-hidden="true" className="vendor-sale-badge-dot" />
+                  {paymentBadge.label}
+                </span>
+              );
+            }
+
             return (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  background: m.bg,
-                  color: m.fg,
-                  borderRadius: 999,
-                  padding: "3px 10px",
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap"
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: m.dot }} />
-                {m.label}
+              <span className={`vendor-sale-badge vendor-sale-badge-open`}>
+                <span
+                  aria-hidden="true"
+                  className="vendor-sale-badge-dot"
+                  style={{ background: statusMeta.dot }}
+                />
+                {statusMeta.label}
               </span>
             );
           })() : null}
